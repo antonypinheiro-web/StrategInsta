@@ -22,10 +22,18 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          light: "hsl(var(--primary-light))",
+          dark: "hsl(var(--primary-dark))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
+        },
+        instagram: {
+          purple: "hsl(var(--instagram-purple))",
+          pink: "hsl(var(--instagram-pink))",
+          orange: "hsl(var(--instagram-orange))",
+          yellow: "hsl(var(--instagram-yellow))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -57,6 +65,21 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+      },
+      backgroundImage: {
+        'gradient-instagram': 'var(--gradient-instagram)',
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-subtle': 'var(--gradient-subtle)',
+        'gradient-hero': 'var(--gradient-hero)',
+      },
+      boxShadow: {
+        'soft': 'var(--shadow-soft)',
+        'medium': 'var(--shadow-medium)',
+        'strong': 'var(--shadow-strong)',
+      },
+      transitionTimingFunction: {
+        'smooth': 'var(--transition-smooth)',
+        'bounce': 'var(--transition-bounce)',
       },
       borderRadius: {
         lg: "var(--radius)",
