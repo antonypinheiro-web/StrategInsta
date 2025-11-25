@@ -41,7 +41,6 @@ export default function Login() {
                   inputBorderHover: 'hsl(var(--ring))',
                   inputBorderFocus: 'hsl(var(--ring))',
                   inputText: 'hsl(var(--foreground))',
-                  inputLabel: 'hsl(var(--foreground))',
                   anchorTextColor: 'hsl(var(--primary))',
                   anchorTextHoverColor: 'hsl(var(--secondary))',
                 },

@@ -103,6 +103,7 @@ const MarkdownRenderer: React.FC<{ content: string | StoriesStrategyItem[] }> = 
     const renderLine = (line: string, index: number) => {
         if (line.match(/^\*\*Opção \d+.*?\*\*$/)) return <h3 key={index} className="text-xl font-bold mt-8 mb-4">{line.replace(/\*\*/g, '')}</h3>;
         if (line.match(/^\*\*\d[\d\.]*\s.*?\*\*$/)) return <h2 key={index} className="text-2xl font-bold mt-6 mb-3 pb-2 border-b border-border">{line.replace(/\*\*/g, '')}</h2>;
+        if (line.match(/^\*\*.+?\*\*$/)) return <h3 key={index} className="text-xl font-semibold mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>;
         if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) return <li key={index} className="ml-5 list-disc text-foreground/80">{line.trim().substring(2)}</li>;
         if (line.trim() === '---') return <hr key={index} className="my-6 border-border" />;
         if (line.trim() === '') return null;
@@ -127,7 +128,7 @@ const Index: React.FC = () => {
     editorialCalendar: CalendarDay[];
     actionPlan: ActionPlanItem[];
   }> | null>(null);
-  const [completedSteps, setCompletedSteps] = new useState<Set<string>>(new Set());
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<HistoryItem | null>(null);
