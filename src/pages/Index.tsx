@@ -14,7 +14,13 @@ import {
 } from '../services/geminiService';
 import { SidebarNav, NavItem } from '../components/SidebarNav';
 import { HistoryPanel } from '../components/HistoryPanel';
-import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History } from 'lucide-react';
+import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react'; // Adicionado Sparkles aqui
+import { useSession } from '@/components/SessionContextProvider';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner'; // Importar toast do sonner
 
 // Type Definitions
 export type GenerationStep = keyof Omit<GeneratedStrategy, 'editorialCalendar' | 'contentTable' | 'actionPlan'>;
@@ -71,11 +77,32 @@ const ThemeSwitcher: React.FC<{ theme: Theme; setTheme: (theme: Theme) => void; 
   );
 };
 
-const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+const MarkdownRenderer: React.FC<{ content: string | StoriesStrategyItem[] }> = ({ content }) => {
+    if (Array.isArray(content)) {
+        // Renderizar StoriesStrategyItem[]
+        return (
+            <div className="space-y-6">
+                {content.map((item, index) => (
+                    <Card key={index} className="shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-lg font-semibold text-primary">{item.dayOfWeek}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-foreground/80">
+                            <p><strong>Objetivo:</strong> {item.objective}</p>
+                            <p><strong>Tipo de Conteúdo:</strong> {item.contentType}</p>
+                            <p><strong>Exemplo:</strong> {item.example}</p>
+                            <p><strong>Dicas:</strong> {item.tips}</p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        );
+    }
+
+    // Renderizar string Markdown
     const renderLine = (line: string, index: number) => {
         if (line.match(/^\*\*Opção \d+.*?\*\*$/)) return <h3 key={index} className="text-xl font-bold mt-8 mb-4">{line.replace(/\*\*/g, '')}</h3>;
         if (line.match(/^\*\*\d[\d\.]*\s.*?\*\*$/)) return <h2 key={index} className="text-2xl font-bold mt-6 mb-3 pb-2 border-b border-border">{line.replace(/\*\*/g, '')}</h2>;
-        if (line.match(/^\*\*.+?\*\*$/)) return <h3 key={index} className="text-xl font-semibold mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>;
         if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) return <li key={index} className="ml-5 list-disc text-foreground/80">{line.trim().substring(2)}</li>;
         if (line.trim() === '---') return <hr key={index} className="my-6 border-border" />;
         if (line.trim() === '') return null;
@@ -85,6 +112,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const Index: React.FC = () => {
+  const { user, isLoading: isSessionLoading } = useSession();
   const [appPhase, setAppPhase] = useState<AppPhase>('onboarding');
   const [dashboardSection, setDashboardSection] = useState<string>('idealCustomerProfile');
   const [generationState, setGenerationState] = useState<GenerationState>('idle');
@@ -99,7 +127,7 @@ const Index: React.FC = () => {
     editorialCalendar: CalendarDay[];
     actionPlan: ActionPlanItem[];
   }> | null>(null);
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const [completedSteps, setCompletedSteps] = new useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<HistoryItem | null>(null);
@@ -110,6 +138,21 @@ const Index: React.FC = () => {
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     root.classList.toggle('dark', isDark);
   }, [theme]);
+
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut();
+    toast.success("Você foi desconectado com sucesso!");
+  }, []);
+
+  const handleSidebarClick = useCallback((id: string) => {
+    if (appPhase === 'dashboard') {
+      setDashboardSection(id);
+      setViewingHistoryItem(null); // Limpa a visualização do histórico ao navegar no dashboard
+    } else {
+      // Lógica para navegação entre as etapas de geração, se necessário
+      // Por enquanto, a navegação é linear via "Confirmar e Continuar"
+    }
+  }, [appPhase]);
 
   const generateStrategyPart = useCallback(async (step: GenerationStep, input: UserInput, currentStrategy: Partial<GeneratedStrategy>, refinementPrompt?: string) => {
       switch(step) {
@@ -125,11 +168,16 @@ const Index: React.FC = () => {
   }, []);
   
   const executeGeneration = useCallback(async (refinementPrompt?: string) => {
-    if (!userInput || typeof appPhase !== 'string' || appPhase === 'onboarding' || appPhase === 'dashboard') return;
+    if (!userInput || typeof appPhase !== 'string' || appPhase === 'onboarding' || appPhase === 'dashboard' || !user?.id) {
+      setError('Você precisa estar logado e ter preenchido os dados iniciais para gerar a estratégia.');
+      toast.error("Erro: Usuário não autenticado ou dados iniciais ausentes.");
+      return;
+    }
     
     isCancelledRef.current = false;
     setGenerationState(refinementPrompt ? 'refining' : 'generating');
     setError(null);
+    toast.info(refinementPrompt ? "Refinando sua estratégia..." : "Gerando sua estratégia...");
 
     try {
       const result = await generateStrategyPart(appPhase as GenerationStep, userInput, strategy, refinementPrompt);
@@ -137,13 +185,29 @@ const Index: React.FC = () => {
       setStrategy(prev => ({ ...prev, [appPhase]: result }));
       setGenerationState('reviewing');
       setIsFirstGeneration(false);
+      toast.success("Seção gerada com sucesso!");
+
+      // Adicionar ao histórico
+      setHistory(prev => [
+        {
+          id: crypto.randomUUID(),
+          type: appPhase as GenerationStep,
+          title: generationTitles[appPhase as GenerationStep],
+          content: result,
+          createdAt: new Date(),
+          prompt: refinementPrompt || JSON.stringify(userInput),
+        },
+        ...prev,
+      ]);
+
     } catch (err) {
       if (isCancelledRef.current) return;
       console.error(err);
       setError('Ocorreu um erro ao gerar esta seção. Por favor, tente novamente.');
       setGenerationState('reviewing');
+      toast.error("Ocorreu um erro ao gerar esta seção.");
     }
-  }, [userInput, appPhase, strategy, generateStrategyPart]);
+  }, [userInput, appPhase, strategy, generateStrategyPart, user?.id]);
 
   useEffect(() => {
     if(generationState === 'generating' && isFirstGeneration){
@@ -152,6 +216,11 @@ const Index: React.FC = () => {
   }, [generationState, isFirstGeneration, executeGeneration]);
   
   const handleStart = useCallback((input: UserInput) => {
+    if (!user?.id) {
+      setError('Você precisa estar logado para criar uma estratégia.');
+      toast.error("Você precisa estar logado para criar uma estratégia.");
+      return;
+    }
     isCancelledRef.current = false;
     setUserInput(input);
     setAppPhase(generationOrder[0]);
@@ -161,6 +230,7 @@ const Index: React.FC = () => {
     setGenerationState('generating');
     setCompletedSteps(new Set());
     setHistory([]);
+    toast.info("Iniciando a geração da sua estratégia...");
 
     const promise = (async () => {
         try {
@@ -172,11 +242,12 @@ const Index: React.FC = () => {
             return { contentTable, editorialCalendar, actionPlan };
         } catch (err) {
             console.error("Falha ao gerar os conteúdos finais em segundo plano:", err);
+            toast.error("Falha ao gerar os conteúdos finais em segundo plano.");
             throw err;
         }
     })();
     setFinalAssetsPromise(promise);
-  }, []);
+  }, [user?.id]);
 
   const handleReset = useCallback(() => {
     setAppPhase('onboarding');
@@ -188,11 +259,13 @@ const Index: React.FC = () => {
     setCompletedSteps(new Set());
     setIsHistoryPanelOpen(false);
     setViewingHistoryItem(null);
+    toast.info("Estratégia resetada. Comece novamente!");
   }, []);
 
   const handleStopGeneration = useCallback(() => {
     isCancelledRef.current = true;
     setError(null);
+    toast.warning("Geração interrompida.");
 
     const currentIndex = generationOrder.indexOf(appPhase as GenerationStep);
     if (currentIndex === 0) {
@@ -212,8 +285,10 @@ const Index: React.FC = () => {
         setAppPhase(generationOrder[currentIndex + 1]);
         setGenerationState('generating');
         setIsFirstGeneration(true);
+        toast.info("Continuando para a próxima etapa...");
     } else {
         setGenerationState('generating');
+        toast.info("Finalizando a geração da estratégia completa...");
         try {
             if (!finalAssetsPromise) throw new Error("Promise dos conteúdos finais não encontrada.");
             const finalAssets = await finalAssetsPromise;
@@ -222,8 +297,11 @@ const Index: React.FC = () => {
             const allSteps = new Set<string>(generationOrder);
             ['contentTable', 'editorialCalendar', 'actionPlan'].forEach(step => allSteps.add(step));
             setCompletedSteps(allSteps);
+            toast.success("Estratégia completa gerada com sucesso!");
+            // TODO: Salvar a estratégia final no Supabase com o user.id
         } catch (err) {
              setError('Falha ao gerar as etapas finais. Por favor, reinicie.');
+             toast.error("Falha ao gerar as etapas finais. Por favor, reinicie.");
         } finally {
             setGenerationState('idle');
         }
@@ -232,11 +310,15 @@ const Index: React.FC = () => {
   
   const handleRegenerate = () => {
       executeGeneration();
+      toast.info("Regerando a seção atual...");
   };
 
   const handleRefine = (e: React.FormEvent) => {
       e.preventDefault();
-      if(!refinementInput.trim()) return;
+      if(!refinementInput.trim()) {
+        toast.warning("Por favor, digite um prompt de refinamento.");
+        return;
+      }
       executeGeneration(refinementInput);
       setRefinementInput('');
   };
@@ -244,6 +326,7 @@ const Index: React.FC = () => {
   const handleViewHistoryItem = (item: HistoryItem) => {
     setViewingHistoryItem(item);
     setDashboardSection(item.type);
+    setIsHistoryPanelOpen(false); // Fecha o painel de histórico ao visualizar um item
   };
 
   const handleDeleteHistoryItem = (itemId: string) => {
@@ -251,60 +334,80 @@ const Index: React.FC = () => {
     if (viewingHistoryItem?.id === itemId) {
         setViewingHistoryItem(null);
     }
+    toast.success("Item do histórico excluído.");
   };
 
-  const renderGenerationStep = () => {
-    const isLoading = generationState === 'generating' || generationState === 'refining';
-    const currentTitle = generationTitles[appPhase as GenerationStep];
-    const currentContent = strategy[appPhase as GenerationStep] as string | StoriesStrategyItem[] | undefined;
+  const renderGenerationStep = useCallback(() => {
+    const currentStep = appPhase as GenerationStep;
+    const currentTitle = generationTitles[currentStep];
+    const currentContent = strategy[currentStep];
 
     return (
-        <div className="bg-card/50 backdrop-blur-sm border border-border p-6 sm:p-8 rounded-2xl shadow-lg w-full animate-fade-in">
-            <h2 className="text-2xl font-bold text-foreground mb-4">{currentTitle}</h2>
-
-            {isLoading ? (
-                <div className="text-center">
-                    <LoadingSpinner message={generationState === 'refining' ? `Ajustando ${currentTitle}...` : `Gerando ${currentTitle}...`} />
-                    <button onClick={handleStopGeneration} className="mt-6 px-6 py-2 text-sm font-semibold rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-all transform hover:scale-105" aria-label="Parar geração de conteúdo">
-                        Parar Geração
-                    </button>
+      <Card className="bg-card/50 backdrop-blur-sm border border-border p-6 sm:p-8 rounded-2xl shadow-lg w-full animate-fade-in">
+        <CardHeader className="px-0 pt-0">
+          <CardTitle className="text-2xl font-bold text-foreground mb-2">{currentTitle}</CardTitle>
+          <p className="text-foreground/70">
+            {generationState === 'generating' && "Gerando conteúdo para esta seção..."}
+            {generationState === 'refining' && "Refinando o conteúdo com base na sua solicitação..."}
+            {generationState === 'reviewing' && "Revise o conteúdo gerado abaixo. Você pode refinar ou confirmar para continuar."}
+          </p>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {generationState === 'generating' || generationState === 'refining' ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <LoadingSpinner message={generationState === 'generating' ? "A IA está trabalhando duro para criar sua estratégia..." : "Ajustando os detalhes para você..."} />
+              <Button variant="outline" onClick={handleStopGeneration} className="mt-8">
+                <XCircle className="w-4 h-4 mr-2" /> Parar Geração
+              </Button>
+            </div>
+          ) : error ? (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-md mb-6 flex items-center gap-2">
+              <XCircle className="w-5 h-5" />
+              <span>{error}</span>
+            </div>
+          ) : currentContent ? (
+            <div className="space-y-6">
+              <MarkdownRenderer content={currentContent} />
+              <form onSubmit={handleRefine} className="space-y-4 mt-8">
+                <Textarea
+                  placeholder="O que você gostaria de refinar ou mudar nesta seção? Ex: 'Torne a bio mais focada em vendas', 'Adicione mais ideias para stories de engajamento'."
+                  value={refinementInput}
+                  onChange={(e) => setRefinementInput(e.target.value)}
+                  rows={3}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={handleRegenerate}>
+                    <RefreshCcw className="w-4 h-4 mr-2" /> Regenerar
+                  </Button>
+                  <Button type="submit" disabled={!refinementInput.trim()}>
+                    <Sparkles className="w-4 h-4 mr-2" /> Refinar
+                  </Button>
                 </div>
-            ) : (
-                <>
-                    {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-md my-4 text-sm">{error}</div>}
-                    {typeof currentContent === 'string' && <div className="mb-8"><MarkdownRenderer content={currentContent} /></div>}
-
-                    {generationState === 'reviewing' && (
-                        <div className="space-y-4 pt-4 border-t border-border">
-                            <form onSubmit={handleRefine}>
-                                <label htmlFor="refinement" className="text-sm font-medium text-foreground/80 mb-2 block">Precisa de ajustes? Peça aqui.</label>
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                    <input id="refinement" type="text" value={refinementInput} onChange={(e) => setRefinementInput(e.target.value)} placeholder="Ex: 'Deixe o tom mais divertido' ou 'Adicione uma opção focada em e-commerce'" className="block w-full rounded-md border-0 bg-card py-2 px-3 text-card-foreground shadow-sm ring-1 ring-inset ring-border focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm" />
-                                    <button type="submit" className="px-4 py-2 text-sm font-semibold rounded-md bg-secondary/80 text-white hover:bg-secondary">Ajustar</button>
-                                </div>
-                            </form>
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
-                                <button onClick={handleRegenerate} className="flex items-center gap-2 text-sm text-foreground/70 hover:text-primary transition-colors">
-                                   🔄 {isFirstGeneration ? 'Gerar Novamente' : 'Gerar Novas Opções'}
-                                </button>
-                                <button onClick={handleConfirmAndContinue} className="w-full sm:w-auto rounded-md bg-gradient-to-r from-primary to-secondary px-8 py-3 text-base font-bold text-white shadow-lg hover:shadow-primary/50 transition-all duration-300 transform hover:scale-[1.02]">
-                                    Aprovar e Continuar &rarr;
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-        </div>
+              </form>
+              <div className="flex justify-end mt-6">
+                <Button onClick={handleConfirmAndContinue}>
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Confirmar e Continuar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-foreground/60 py-10">
+              Nenhum conteúdo gerado para esta seção ainda.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     );
-  };
-  
-  const handleSidebarClick = (id: string) => {
-    if (appPhase === 'dashboard' && completedSteps.has(id)) {
-        setDashboardSection(id);
-        setViewingHistoryItem(null);
-    }
-  };
+  }, [appPhase, generationState, strategy, error, refinementInput, handleRefine, handleRegenerate, handleConfirmAndContinue, handleStopGeneration]);
+
+
+  if (isSessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoadingSpinner message="Verificando sessão..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-secondary selection:text-white">
@@ -315,6 +418,11 @@ const Index: React.FC = () => {
         
         <header className="py-8 text-center relative mb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="absolute top-8 right-8 flex items-center gap-4">
+              {user && (
+                <button onClick={handleLogout} className="p-2 rounded-full transition-colors text-foreground/60 hover:text-foreground hover:bg-border" aria-label="Sair">
+                    Sair
+                </button>
+              )}
               {appPhase !== 'onboarding' && (
                 <button onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} className="p-2 rounded-full transition-colors text-foreground/60 hover:text-foreground hover:bg-border" aria-label="Toggle history panel">
                     <History className="w-6 h-6" />
