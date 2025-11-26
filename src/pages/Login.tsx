@@ -3,6 +3,7 @@ import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import logo from '@/assets/logo.png';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,12 +11,10 @@ export default function Login() {
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        // Se o usuário já estiver logado, redireciona para a página principal
         navigate('/');
       }
     });
 
-    // Limpa o listener quando o componente é desmontado
     return () => {
       authListener.subscription.unsubscribe();
     };
@@ -24,10 +23,17 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md bg-card p-8 rounded-lg shadow-lg border border-border">
-        <h2 className="text-3xl font-bold text-center text-foreground mb-6">Bem-vindo ao StrategInsta</h2>
+        <div className="flex flex-col items-center text-center mb-6 space-y-2">
+          <img
+            src={logo}
+            alt="StrategInsta Logo"
+            className="h-16 w-auto logo-theme-aware"
+          />
+          <p className="text-lg font-semibold text-foreground">Bem-vindo</p>
+        </div>
         <Auth
           supabaseClient={supabase}
-          providers={[]} // Não estamos usando provedores de terceiros (Google, Facebook) por enquanto
+          providers={[]}
           appearance={{
             theme: ThemeSupa,
             variables: {
@@ -47,8 +53,8 @@ export default function Login() {
               },
             },
           }}
-          theme="light" // Usando o tema claro
-          redirectTo={window.location.origin} // Redireciona para a raiz após login/cadastro
+          theme="light"
+          redirectTo={window.location.origin}
         />
       </div>
     </div>
