@@ -21,7 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { InputDialog } from '@/components/InputDialog'; // Importar o InputDialog
+import { InputDialog } from '@/components/InputDialog';
+import logo from "@/assets/logo.png"; // Importar a logo
 
 // Type Definitions
 export type GenerationStep = keyof Omit<GeneratedStrategy, 'editorialCalendar' | 'contentTable' | 'actionPlan'>;
@@ -485,9 +486,12 @@ const Index: React.FC = () => {
               <ThemeSwitcher theme={theme} setTheme={setTheme} />
             </div>
             <div className="flex items-center justify-center gap-4">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
-                StrategInsta
-              </h1>
+              {/* Substituindo o h1 pelo img da logo */}
+              <img
+                src={logo}
+                alt="StrategInsta Logo"
+                className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto logo-theme-aware"
+              />
             </div>
             <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               Sua Estrategista de Conteúdo Pessoal, Potencializada por IA

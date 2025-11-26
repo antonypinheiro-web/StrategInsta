@@ -139,4 +139,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Estilo para a logo se adaptar ao tema */
+  .logo-theme-aware {
+    filter: invert(0); /* Padrão para tema claro (logo preta) */
+  }
+
+  .dark .logo-theme-aware {
+    filter: invert(1); /* Inverte para tema escuro (logo branca) */
+  }
 }

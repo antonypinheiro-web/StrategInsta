@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Instagram, Sparkles, Target, Calendar, TrendingUp, Users, Zap } from "lucide-react";
 import heroImage from "@/assets/hero-image.jpg";
+import logo from "@/assets/logo.png"; // Importar a logo
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -21,13 +22,16 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               Powered by AI
             </Badge>
             
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight">
-              StrategInsta
-            </h1>
+            {/* Substituindo o h1 pelo img da logo */}
+            <img
+              src={logo}
+              alt="StrategInsta Logo"
+              className="h-12 sm:h-16 md:h-20 lg:h-24 w-auto mx-auto mb-6 logo-theme-aware"
+            />
             
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
-              Transform your Instagram presence with AI-generated content strategies.<br />
-              <span className="text-primary font-semibold">Eliminate creative blocks. Grow your following.</span>
+              Transforme sua presença no Instagram com estratégias de conteúdo geradas por IA.<br />
+              <span className="text-primary font-semibold">Elimine bloqueios criativos. Aumente seus seguidores.</span>
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
@@ -37,7 +41,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-8 py-6 shadow-medium"
               >
                 <Instagram className="w-5 h-5 mr-2" />
-                Create My Strategy
+                Criar Minha Estratégia
               </Button>
               
               <Button 
@@ -46,26 +50,26 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 className="border-primary/20 hover:bg-primary/5 text-lg px-8 py-6"
               >
                 <Zap className="w-5 h-5 mr-2" />
-                Watch Demo
+                Assistir Demonstração
               </Button>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-primary">30+</div>
-                <div className="text-sm text-muted-foreground">Content Ideas</div>
+                <div className="text-sm text-muted-foreground">Ideias de Conteúdo</div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-primary">7 Days</div>
-                <div className="text-sm text-muted-foreground">Editorial Calendar</div>
+                <div className="text-2xl font-bold text-primary">7 Dias</div>
+                <div className="text-sm text-muted-foreground">Calendário Editorial</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary">3 Min</div>
-                <div className="text-sm text-muted-foreground">Setup Time</div>
+                <div className="text-sm text-muted-foreground">Tempo de Configuração</div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-primary">AI-Powered</div>
-                <div className="text-sm text-muted-foreground">Personalization</div>
+                <div className="text-sm text-muted-foreground">Personalização</div>
               </div>
             </div>
           </div>
@@ -87,10 +91,10 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Everything you need to <span className="text-primary">dominate Instagram</span>
+              Tudo o que você precisa para <span className="text-primary">dominar o Instagram</span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From audience analysis to content creation, our AI handles the strategy so you can focus on creating amazing content.
+              Da análise de público à criação de conteúdo, nossa IA cuida da estratégia para você focar em criar conteúdo incrível.
             </p>
           </div>
           
@@ -100,9 +104,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <Target className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Audience Analysis</h3>
+                <h3 className="text-xl font-semibold mb-3">Análise de Público</h3>
                 <p className="text-muted-foreground">
-                  Deep dive into your ideal customer profile with AI-powered persona creation and targeting insights.
+                  Mergulhe fundo no seu perfil de cliente ideal com criação de persona e insights de segmentação impulsionados por IA.
                 </p>
               </CardContent>
             </Card>
@@ -112,9 +116,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Content Calendar</h3>
+                <h3 className="text-xl font-semibold mb-3">Calendário de Conteúdo</h3>
                 <p className="text-muted-foreground">
-                  30-day editorial calendar with post ideas, captions, hashtags, and optimal posting times.
+                  Calendário editorial de 30 dias com ideias de posts, legendas, hashtags e horários de postagem ideais.
                 </p>
               </CardContent>
             </Card>
@@ -124,9 +128,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Growth Strategy</h3>
+                <h3 className="text-xl font-semibold mb-3">Estratégia de Crescimento</h3>
                 <p className="text-muted-foreground">
-                  Monetization ideas and engagement tactics tailored to your niche and business goals.
+                  Ideias de monetização e táticas de engajamento personalizadas para seu nicho e objetivos de negócio.
                 </p>
               </CardContent>
             </Card>
@@ -136,9 +140,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <Users className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Stories Strategy</h3>
+                <h3 className="text-xl font-semibold mb-3">Estratégia de Stories</h3>
                 <p className="text-muted-foreground">
-                  Weekly stories framework to maximize engagement and build deeper connections with your audience.
+                  Estrutura semanal de stories para maximizar o engajamento e construir conexões mais profundas com seu público.
                 </p>
               </CardContent>
             </Card>
@@ -148,9 +152,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">AI Content Generator</h3>
+                <h3 className="text-xl font-semibold mb-3">Gerador de Conteúdo IA</h3>
                 <p className="text-muted-foreground">
-                  Transform any idea into complete posts with captions, carousels, and story sequences on demand.
+                  Transforme qualquer ideia em posts completos com legendas, carrosséis e sequências de stories sob demanda.
                 </p>
               </CardContent>
             </Card>
@@ -160,9 +164,9 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-6">
                   <Instagram className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Bio Optimization</h3>
+                <h3 className="text-xl font-semibold mb-3">Otimização de Bio</h3>
                 <p className="text-muted-foreground">
-                  Multiple Instagram bio variations optimized for conversions and discoverability.
+                  Múltiplas variações de bio do Instagram otimizadas para conversões e descoberta.
                 </p>
               </CardContent>
             </Card>
@@ -175,10 +179,10 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="container mx-auto px-6 text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Ready to transform your Instagram strategy?
+              Pronto para transformar sua estratégia no Instagram?
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of creators who've already revolutionized their content strategy with AI.
+              Junte-se a milhares de criadores que já revolucionaram sua estratégia de conteúdo com IA.
             </p>
             <Button 
               size="lg" 
@@ -186,7 +190,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
               className="bg-gradient-primary hover:opacity-90 transition-opacity text-lg px-12 py-6 shadow-medium"
             >
               <Instagram className="w-5 h-5 mr-2" />
-              Get Started Free
+              Comece Grátis
             </Button>
           </div>
         </div>
