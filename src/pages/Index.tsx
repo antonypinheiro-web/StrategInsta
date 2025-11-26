@@ -14,13 +14,14 @@ import {
 } from '../services/geminiService';
 import { SidebarNav, NavItem } from '../components/SidebarNav';
 import { HistoryPanel } from '../components/HistoryPanel';
-import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react'; // Adicionado Sparkles aqui
+import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner'; // Importar toast do sonner
+import { toast } from 'sonner';
+import { InputDialog } from '@/components/InputDialog'; // Importar o InputDialog
 
 // Type Definitions
 export type GenerationStep = keyof Omit<GeneratedStrategy, 'editorialCalendar' | 'contentTable' | 'actionPlan'>;
@@ -132,6 +133,7 @@ const Index: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<HistoryItem | null>(null);
+  const [showNameStrategyDialog, setShowNameStrategyDialog] = useState(false); // Novo estado para o diálogo
   const isCancelledRef = useRef(false);
 
   useEffect(() => {
@@ -142,6 +144,11 @@ const Index: React.FC = () => {
 
   const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
+    setUserInput(null);
+    setStrategy({});
+    setHistory([]);
+    setCompletedSteps(new Set());
+    setAppPhase('onboarding');
     toast.success("Você foi desconectado com sucesso!");
   }, []);
 
@@ -224,7 +231,6 @@ const Index: React.FC = () => {
     }
     isCancelledRef.current = false;
     setUserInput(input);
-    setAppPhase(generationOrder[0]);
     setStrategy({});
     setError(null);
     setIsFirstGeneration(true);
@@ -260,6 +266,7 @@ const Index: React.FC = () => {
     setCompletedSteps(new Set());
     setIsHistoryPanelOpen(false);
     setViewingHistoryItem(null);
+    setShowNameStrategyDialog(false); // Resetar o estado do diálogo
     toast.info("Estratégia resetada. Comece novamente!");
   }, []);
 
@@ -276,6 +283,33 @@ const Index: React.FC = () => {
         setGenerationState('reviewing');
     }
   }, [appPhase, handleReset]);
+
+  const saveStrategyToSupabase = useCallback(async (strategyName: string) => {
+    if (!user?.id || !userInput || !strategy) {
+      toast.error("Não foi possível salvar a estratégia: dados incompletos.");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('strategies')
+        .insert({
+          user_id: user.id,
+          name: strategyName,
+          user_input: userInput,
+          generated_strategy: strategy,
+          history: history, // Salvar o histórico junto com a estratégia
+        })
+        .select();
+
+      if (error) throw error;
+      toast.success("Estratégia salva com sucesso!");
+      console.log("Estratégia salva:", data);
+    } catch (error) {
+      console.error("Erro ao salvar estratégia no Supabase:", error);
+      toast.error("Erro ao salvar a estratégia.");
+    }
+  }, [user?.id, userInput, strategy, history]);
 
   const handleConfirmAndContinue = useCallback(async () => {
     const currentStepId = appPhase;
@@ -294,12 +328,13 @@ const Index: React.FC = () => {
             if (!finalAssetsPromise) throw new Error("Promise dos conteúdos finais não encontrada.");
             const finalAssets = await finalAssetsPromise;
             setStrategy(prev => ({ ...prev, ...finalAssets }));
-            setAppPhase('dashboard');
+            
             const allSteps = new Set<string>(generationOrder);
             ['contentTable', 'editorialCalendar', 'actionPlan'].forEach(step => allSteps.add(step));
             setCompletedSteps(allSteps);
+            
             toast.success("Estratégia completa gerada com sucesso!");
-            // TODO: Salvar a estratégia final no Supabase com o user.id
+            setShowNameStrategyDialog(true); // Abrir o diálogo para nomear a estratégia
         } catch (err) {
              setError('Falha ao gerar as etapas finais. Por favor, reinicie.');
              toast.error("Falha ao gerar as etapas finais. Por favor, reinicie.");
@@ -309,6 +344,16 @@ const Index: React.FC = () => {
     }
   }, [appPhase, finalAssetsPromise]);
   
+  const handleNameStrategyConfirm = useCallback((name: string) => {
+    saveStrategyToSupabase(name);
+    setAppPhase('dashboard'); // Mover para o dashboard após nomear e salvar
+  }, [saveStrategyToSupabase]);
+
+  const handleNameStrategySkip = useCallback(() => {
+    saveStrategyToSupabase(`Estratégia ${new Date().toLocaleDateString()}`); // Salvar com nome padrão
+    setAppPhase('dashboard'); // Mover para o dashboard
+  }, [saveStrategyToSupabase]);
+
   const handleRegenerate = () => {
       executeGeneration();
       toast.info("Regerando a seção atual...");
@@ -336,6 +381,14 @@ const Index: React.FC = () => {
         setViewingHistoryItem(null);
     }
     toast.success("Item do histórico excluído.");
+  };
+
+  const handleRenameHistoryItem = (itemId: string, newTitle: string) => {
+    setHistory(prev => prev.map(item => item.id === itemId ? { ...item, title: newTitle } : item));
+    if (viewingHistoryItem?.id === itemId) {
+        setViewingHistoryItem(prev => prev ? { ...prev, title: newTitle } : null);
+    }
+    toast.success("Item do histórico renomeado.");
   };
 
   const renderGenerationStep = useCallback(() => {
@@ -484,6 +537,7 @@ const Index: React.FC = () => {
                     onClose={() => setIsHistoryPanelOpen(false)}
                     onViewItem={handleViewHistoryItem}
                     onDeleteItem={handleDeleteHistoryItem}
+                    onRenameItem={handleRenameHistoryItem} // Passar a função de renomear
                   />
                 </aside>
               )}
@@ -506,6 +560,18 @@ const Index: React.FC = () => {
           <div className="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[var(--gradient-from)] to-[var(--gradient-to)] opacity-30 dark:opacity-20 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
         </div>
       </div>
+      {/* Diálogo para nomear a estratégia */}
+      <InputDialog
+        isOpen={showNameStrategyDialog}
+        onClose={() => setShowNameStrategyDialog(false)}
+        onConfirm={handleNameStrategyConfirm}
+        title="Nomear sua Estratégia"
+        description="Dê um nome à sua nova estratégia para facilitar a organização no histórico."
+        label="Nome da Estratégia"
+        placeholder="Ex: Estratégia de Lançamento do Curso X"
+        confirmText="Salvar e Ir para Dashboard"
+        cancelText="Pular e Ir para Dashboard"
+      />
     </div>
   );
 };

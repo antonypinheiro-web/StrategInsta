@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, HelpCircle, User, Users, Instagram, Target, Filter, Sparkles } from "lucide-react";
-import type { UserInput, FunnelFocus } from "../types";
-import { funnelOptions } from "../types";
+import { Upload, HelpCircle, User, Users, Instagram, Target, Filter, Sparkles, Volume2, ShoppingBag, Lightbulb, TrendingUp, LayoutGrid, Clock, Hourglass, Award } from "lucide-react";
+import type { UserInput, FunnelFocus, ProficiencyLevel, PostingFrequency } from "../types";
+import { funnelOptions, proficiencyLevelOptions, postingFrequencyOptions } from "../types";
 
 interface OnboardingWizardProps {
   onStart: (data: UserInput) => void;
@@ -38,13 +38,21 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     username: initialValues?.username || '',
     goals: initialValues?.goals || '',
     funnelFocus: initialValues?.funnelFocus || 'balanced',
-    files: undefined
+    files: initialValues?.files || undefined,
+    brandVoice: initialValues?.brandVoice || '',
+    productsAndServices: initialValues?.productsAndServices || '',
+    existingContentInsights: initialValues?.existingContentInsights || '',
+    competitorsAndInspirations: initialValues?.competitorsAndInspirations || '',
+    contentPillars: initialValues?.contentPillars || '',
+    desiredPostingFrequency: initialValues?.desiredPostingFrequency || '3x_semana',
+    availableResources: initialValues?.availableResources || '',
+    instagramProficiencyLevel: initialValues?.instagramProficiencyLevel || 'intermediario',
   });
 
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const updateFormData = (field: keyof UserInput, value: string | FunnelFocus | File[]) => {
+  const updateFormData = (field: keyof UserInput, value: string | FunnelFocus | File[] | ProficiencyLevel | PostingFrequency) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -135,7 +143,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <Label htmlFor="audience" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
                 <Users className="w-4 h-4" />
                 Descreva seu público-alvo
-                <Tooltip content="Descreva em detalhes para quem você cria conteúdo. Inclua dados demográficos, interesses e dores do seu público.">
+                <Tooltip content="Descreva em detalhes para quem você cria conteúdo. Inclua dados demográficos, interesses, dores e desejos mais profundos do seu público.">
                   <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
                 </Tooltip>
               </Label>
@@ -143,7 +151,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 id="audience"
                 value={formData.audience}
                 onChange={(e) => updateFormData('audience', e.target.value)}
-                placeholder="Ex: Mulheres de 25-35 anos, que trabalham em casa..."
+                placeholder="Ex: Mulheres de 25-35 anos, que trabalham em casa, buscam equilíbrio e bem-estar, sonham em ter mais tempo para si e para a família."
                 className="w-full resize-none"
                 rows={3}
                 required
@@ -187,7 +195,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   type="text"
                   value={formData.goals}
                   onChange={(e) => updateFormData('goals', e.target.value)}
-                  placeholder="Ex: Vender meu curso online..."
+                  placeholder="Ex: Vender meu curso online de yoga para iniciantes..."
                   required
                 />
               </div>
@@ -208,6 +216,173 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {funnelOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-foreground/60">{option.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Novos Campos */}
+            {/* Tom de Voz */}
+            <div>
+              <Label htmlFor="brandVoice" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <Volume2 className="w-4 h-4" />
+                Tom de Voz e Personalidade da Marca
+                <Tooltip content="Descreva como sua marca se comunica. É formal, divertida, inspiradora, técnica, amigável? Isso ajuda a IA a criar legendas e textos alinhados.">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Input
+                id="brandVoice"
+                type="text"
+                value={formData.brandVoice}
+                onChange={(e) => updateFormData('brandVoice', e.target.value)}
+                placeholder="Ex: Inspirador e motivacional, com um toque de humor."
+                className="w-full"
+              />
+            </div>
+
+            {/* Produtos e Serviços */}
+            <div>
+              <Label htmlFor="productsAndServices" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <ShoppingBag className="w-4 h-4" />
+                Seus Principais Produtos/Serviços
+                <Tooltip content="Liste e descreva brevemente o que você oferece. Ex: 'Curso online de fotografia para iniciantes', 'Consultoria de marketing digital 1:1'.">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Textarea
+                id="productsAndServices"
+                value={formData.productsAndServices}
+                onChange={(e) => updateFormData('productsAndServices', e.target.value)}
+                placeholder="Ex: E-book 'Guia Completo de Alimentação Saudável' (ajuda a emagrecer com saúde); Mentoria 'Descomplique seu Instagram' (para empreendedores digitais)."
+                className="w-full resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Insights de Conteúdo Existente */}
+            <div>
+              <Label htmlFor="existingContentInsights" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <Lightbulb className="w-4 h-4" />
+                Insights de Conteúdo Anterior (Opcional)
+                <Tooltip content="O que funcionou bem ou não no seu conteúdo passado? Quais tipos de posts geram mais engajamento? (Ex: 'Vídeos curtos de dicas rápidas viralizam', 'Carrosséis educativos têm bom salvamento').">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Textarea
+                id="existingContentInsights"
+                value={formData.existingContentInsights}
+                onChange={(e) => updateFormData('existingContentInsights', e.target.value)}
+                placeholder="Ex: Meus tutoriais em vídeo têm muito engajamento, mas posts de texto puro não performam bem."
+                className="w-full resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Concorrentes e Inspirações */}
+            <div>
+              <Label htmlFor="competitorsAndInspirations" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <TrendingUp className="w-4 h-4" />
+                Perfis de Referência/Concorrentes (Opcional)
+                <Tooltip content="Liste 2-3 perfis do Instagram que você admira ou considera concorrentes, e o que você gosta/não gosta neles.">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Textarea
+                id="competitorsAndInspirations"
+                value={formData.competitorsAndInspirations}
+                onChange={(e) => updateFormData('competitorsAndInspirations', e.target.value)}
+                placeholder="Ex: @perfil_inspirador (gosto da estética), @concorrente_x (não gosto do tom de voz muito formal)."
+                className="w-full resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Pilares de Conteúdo */}
+            <div>
+              <Label htmlFor="contentPillars" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <LayoutGrid className="w-4 h-4" />
+                Seus Pilares de Conteúdo (Opcional)
+                <Tooltip content="Quais são os 3-5 temas principais que você sempre aborda em seu conteúdo? (Ex: 'Receitas saudáveis', 'Dicas de produtividade', 'Histórias de superação').">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Textarea
+                id="contentPillars"
+                value={formData.contentPillars}
+                onChange={(e) => updateFormData('contentPillars', e.target.value)}
+                placeholder="Ex: Bem-estar, Alimentação Consciente, Mindfulness, Rotina Saudável."
+                className="w-full resize-none"
+                rows={2}
+              />
+            </div>
+
+            {/* Frequência de Postagem Desejada */}
+            <div>
+              <Label className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <Clock className="w-4 h-4" />
+                Frequência de Postagem Desejada
+                <Tooltip content="Com que frequência você gostaria de postar no feed do Instagram?">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Select value={formData.desiredPostingFrequency} onValueChange={(value: PostingFrequency) => updateFormData('desiredPostingFrequency', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {postingFrequencyOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-foreground/60">{option.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Recursos e Tempo Disponível */}
+            <div>
+              <Label htmlFor="availableResources" className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <Hourglass className="w-4 h-4" />
+                Tempo/Recursos Disponíveis (Opcional)
+                <Tooltip content="Quanto tempo você pode dedicar à criação de conteúdo por semana? (Ex: '2-3 horas', 'um dia inteiro', 'pouco tempo, preciso de algo simples').">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Input
+                id="availableResources"
+                type="text"
+                value={formData.availableResources}
+                onChange={(e) => updateFormData('availableResources', e.target.value)}
+                placeholder="Ex: Consigo dedicar 5 horas por semana para criar conteúdo."
+                className="w-full"
+              />
+            </div>
+
+            {/* Nível de Proficiência no Instagram */}
+            <div>
+              <Label className="flex items-center gap-2 text-sm font-medium text-foreground/80 mb-2">
+                <Award className="w-4 h-4" />
+                Seu Nível de Experiência no Instagram
+                <Tooltip content="Selecione seu nível para que a IA possa sugerir atividades e dicas adequadas à sua evolução.">
+                  <HelpCircle className="w-4 h-4 text-foreground/40 hover:text-primary cursor-help" />
+                </Tooltip>
+              </Label>
+              <Select value={formData.instagramProficiencyLevel} onValueChange={(value: ProficiencyLevel) => updateFormData('instagramProficiencyLevel', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {proficiencyLevelOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div>
                         <div className="font-medium">{option.label}</div>
