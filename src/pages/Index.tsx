@@ -195,9 +195,10 @@ const Index: React.FC = () => {
   }, []);
   
   const executeGeneration = useCallback(async (refinementPrompt?: string) => {
-    if (!userInput || typeof appPhase !== 'string' || appPhase === 'onboarding' || appPhase === 'dashboard' || !user?.id) {
-      setError('Você precisa estar logado e ter preenchido os dados iniciais para gerar a estratégia.');
-      toast.error("Erro: Usuário não autenticado ou dados iniciais ausentes.");
+    // A verificação de autenticação agora é feita no OnboardingWizard antes de chamar handleStart
+    if (!userInput || typeof appPhase !== 'string' || appPhase === 'onboarding' || appPhase === 'dashboard') {
+      setError('Dados iniciais ausentes ou fase do aplicativo inválida para geração.');
+      toast.error("Erro: Dados iniciais ausentes ou fase do aplicativo inválida para geração.");
       return;
     }
     
@@ -234,7 +235,7 @@ const Index: React.FC = () => {
       setGenerationState('reviewing');
       toast.error("Ocorreu um erro ao gerar esta seção.");
     }
-  }, [userInput, appPhase, strategy, generateStrategyPart, user?.id]);
+  }, [userInput, appPhase, strategy, generateStrategyPart]); // Removido user?.id daqui, pois a verificação é feita antes
 
   useEffect(() => {
     if(generationState === 'generating' && isFirstGeneration){
@@ -243,11 +244,14 @@ const Index: React.FC = () => {
   }, [generationState, isFirstGeneration, executeGeneration]);
   
   const handleStart = useCallback((input: UserInput) => {
-    if (!user?.id) {
-      setError('Você precisa estar logado para criar uma estratégia.');
-      toast.error("Você precisa estar logado para criar uma estratégia.");
+    // A verificação de autenticação já foi feita no OnboardingWizard antes de chamar handleStart
+    // Se handleStart for chamado, significa que isAuthenticated era true.
+    if (!user?.id) { // No entanto, uma verificação final aqui não faz mal, caso haja um race condition extremo
+      setError('Erro interno: Usuário não autenticado ao iniciar a estratégia.');
+      toast.error("Erro interno: Usuário não autenticado ao iniciar a estratégia.");
       return;
     }
+
     isCancelledRef.current = false;
     setUserInput(input);
     // Save input to localStorage, excluding files as they are not JSON serializable
@@ -281,7 +285,7 @@ const Index: React.FC = () => {
         }
     })();
     setFinalAssetsPromise(promise);
-  }, [user?.id]);
+  }, [user?.id]); // user?.id é uma dependência importante aqui
 
   const handleReset = useCallback(() => {
     setAppPhase('onboarding');
@@ -531,7 +535,7 @@ const Index: React.FC = () => {
 
         <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
           {appPhase === 'onboarding' ? (
-              <OnboardingWizard onStart={handleStart} initialValues={userInput} error={error} />
+              <OnboardingWizard onStart={handleStart} initialValues={userInput} error={error} isAuthenticated={!!user?.id} />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-8 items-start">
               <aside className="lg:col-span-1 xl:col-span-1">

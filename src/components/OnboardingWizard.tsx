@@ -13,6 +13,7 @@ interface OnboardingWizardProps {
   onStart: (data: UserInput) => void;
   initialValues?: UserInput | null;
   error?: string | null;
+  isAuthenticated: boolean; // Nova prop para o estado de autenticação
 }
 
 const Tooltip: React.FC<{ children: React.ReactNode; content: string }> = ({ children, content }) => {
@@ -30,7 +31,8 @@ const Tooltip: React.FC<{ children: React.ReactNode; content: string }> = ({ chi
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ 
   onStart, 
   initialValues, 
-  error 
+  error,
+  isAuthenticated // Receber a prop isAuthenticated
 }) => {
   const [formData, setFormData] = useState<UserInput>({
     niche: initialValues?.niche || '',
@@ -91,7 +93,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     }
   };
 
-  const canSubmit = formData.niche.trim() && formData.audience.trim() && formData.username.trim() && formData.goals.trim();
+  // O botão só será habilitado se todos os campos obrigatórios estiverem preenchidos E o usuário estiver autenticado
+  const canSubmit = formData.niche.trim() && formData.audience.trim() && formData.username.trim() && formData.goals.trim() && isAuthenticated;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -453,8 +456,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={!canSubmit}
-              className="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 text-base font-bold shadow-lg hover:shadow-primary/50 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              disabled={!canSubmit} // Usar a nova lógica de canSubmit
+              className="w-full bg-gradient-primary text-white py-3 text-base font-bold shadow-lg hover:shadow-primary/50 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
               <Sparkles className="w-5 h-5 mr-2" />
               Criar Estratégia de Sucesso
