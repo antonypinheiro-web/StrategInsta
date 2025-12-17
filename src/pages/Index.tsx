@@ -196,7 +196,8 @@ const Index: React.FC = () => {
   
   const executeGeneration = useCallback(async (refinementPrompt?: string) => {
     // A verificação de autenticação agora é feita no OnboardingWizard antes de chamar handleStart
-    if (!userInput || typeof appPhase !== 'string' || appPhase === 'onboarding' || appPhase === 'dashboard') {
+    // A fase do aplicativo deve ser uma das etapas de geração, não 'onboarding' ou 'dashboard'
+    if (!userInput || typeof appPhase !== 'string' || appPhase === 'dashboard' || !generationOrder.includes(appPhase as GenerationStep)) {
       setError('Dados iniciais ausentes ou fase do aplicativo inválida para geração.');
       toast.error("Erro: Dados iniciais ausentes ou fase do aplicativo inválida para geração.");
       return;
@@ -235,7 +236,7 @@ const Index: React.FC = () => {
       setGenerationState('reviewing');
       toast.error("Ocorreu um erro ao gerar esta seção.");
     }
-  }, [userInput, appPhase, strategy, generateStrategyPart]); // Removido user?.id daqui, pois a verificação é feita antes
+  }, [userInput, appPhase, strategy, generateStrategyPart]);
 
   useEffect(() => {
     if(generationState === 'generating' && isFirstGeneration){
@@ -244,14 +245,11 @@ const Index: React.FC = () => {
   }, [generationState, isFirstGeneration, executeGeneration]);
   
   const handleStart = useCallback((input: UserInput) => {
-    // A verificação de autenticação já foi feita no OnboardingWizard antes de chamar handleStart
-    // Se handleStart for chamado, significa que isAuthenticated era true.
-    if (!user?.id) { // No entanto, uma verificação final aqui não faz mal, caso haja um race condition extremo
+    if (!user?.id) {
       setError('Erro interno: Usuário não autenticado ao iniciar a estratégia.');
       toast.error("Erro interno: Usuário não autenticado ao iniciar a estratégia.");
       return;
     }
-
     isCancelledRef.current = false;
     setUserInput(input);
     // Save input to localStorage, excluding files as they are not JSON serializable
@@ -268,7 +266,8 @@ const Index: React.FC = () => {
     setGenerationState('generating');
     setCompletedSteps(new Set());
     setHistory([]);
-    toast.info("Iniciando a geração da sua estratégia...");
+    setAppPhase(generationOrder[0]); // <--- AQUI: Define a fase do aplicativo para a primeira etapa de geração
+    // console.log("handleStart called. Current user:", user); // Removido o console.log de depuração
 
     const promise = (async () => {
         try {
@@ -285,7 +284,7 @@ const Index: React.FC = () => {
         }
     })();
     setFinalAssetsPromise(promise);
-  }, [user?.id]); // user?.id é uma dependência importante aqui
+  }, [user?.id]);
 
   const handleReset = useCallback(() => {
     setAppPhase('onboarding');
