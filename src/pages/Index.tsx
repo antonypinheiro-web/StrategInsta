@@ -114,12 +114,29 @@ const MarkdownRenderer: React.FC<{ content: string | StoriesStrategyItem[] }> = 
     return <div className="prose prose-sm md:prose-base max-w-none">{content.split('\n').map(renderLine)}</div>;
 };
 
+const LOCAL_STORAGE_KEY = 'strateginsta_user_input';
+
 const Index: React.FC = () => {
   const { user, isLoading: isSessionLoading } = useSession();
   const [appPhase, setAppPhase] = useState<AppPhase>('onboarding');
   const [dashboardSection, setDashboardSection] = useState<string>('idealCustomerProfile');
   const [generationState, setGenerationState] = useState<GenerationState>('idle');
-  const [userInput, setUserInput] = useState<UserInput | null>(null);
+  // Initialize userInput with data from localStorage if available
+  const [userInput, setUserInput] = useState<UserInput | null>(() => {
+    if (typeof window !== 'undefined') { // Ensure localStorage is available (client-side)
+      try {
+        const storedInput = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (storedInput) {
+          const parsedInput = JSON.parse(storedInput);
+          // Ensure files are not persisted, as they are not JSON serializable
+          return { ...parsedInput, files: undefined };
+        }
+      } catch (e) {
+        console.error("Failed to parse user input from localStorage", e);
+      }
+    }
+    return null;
+  });
   const [strategy, setStrategy] = useState<Partial<GeneratedStrategy>>({});
   const [error, setError] = useState<string | null>(null);
   const [refinementInput, setRefinementInput] = useState('');
@@ -150,6 +167,7 @@ const Index: React.FC = () => {
     setHistory([]);
     setCompletedSteps(new Set());
     setAppPhase('onboarding');
+    localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear stored input on logout
     toast.success("Você foi desconectado com sucesso!");
   }, []);
 
@@ -232,6 +250,14 @@ const Index: React.FC = () => {
     }
     isCancelledRef.current = false;
     setUserInput(input);
+    // Save input to localStorage, excluding files as they are not JSON serializable
+    const inputToStore = { ...input, files: undefined };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(inputToStore));
+    } catch (e) {
+      console.error("Failed to save user input to localStorage", e);
+    }
+
     setStrategy({});
     setError(null);
     setIsFirstGeneration(true);
