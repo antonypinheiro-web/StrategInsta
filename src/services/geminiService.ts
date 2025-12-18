@@ -20,39 +20,44 @@ export const generateIdealCustomerProfile = async (
   const goals = input.goals;
   const brandVoice = input.brandVoice || 'profissional e amigável';
   const existingContentInsights = input.existingContentInsights || 'sem insights específicos';
+  const productsAndServices = input.productsAndServices || 'soluções inovadoras';
+
+  // Extrair frases-chave do público e objetivos para uma saída mais específica
+  const primaryAudiencePain = audience.split(',')[0]?.trim() || 'falta de clareza';
+  const secondaryAudiencePain = audience.split(',')[1]?.trim() || 'dificuldade em encontrar soluções';
+  const primaryAudienceDesire = goals.split(',')[0]?.trim() || 'alcançar resultados tangíveis';
+  const secondaryAudienceDesire = goals.split(',')[1]?.trim() || 'sentir-se capacitado';
 
   let profileDescription = `**Perfil do Cliente Ideal para o Nicho de ${niche}**
 
 Este perfil foi construído para maximizar seus objetivos de "${goals}" e ressoar com seu público-alvo: "${audience}".
 
 **1. Demografia e Contexto**
-- Idade: Varia conforme o público, mas geralmente entre 25-45 anos.
+- Idade: Geralmente entre 25-45 anos, com foco em indivíduos que buscam crescimento em ${niche}.
 - Gênero: Adaptado ao seu público, por exemplo, "Principalmente mulheres" ou "Misto".
-- Localização: Foco em áreas urbanas ou com acesso digital.
-- Renda: Média a alta, dependendo do valor percebido dos seus produtos/serviços.
-- Ocupação: Profissionais, empreendedores ou indivíduos buscando desenvolvimento pessoal/profissional em ${niche}.
+- Localização: Foco em áreas urbanas ou com acesso digital, interessados em desenvolvimento online.
+- Renda: Média a alta, dispostos a investir em ${productsAndServices} para resolver seus problemas.
+- Ocupação: Profissionais, empreendedores ou indivíduos buscando aprimoramento em ${niche}.
 
 **2. Características Comportamentais e Psicográficas**
-- Interesses: Busca ativa por soluções, aprendizado e melhoria em áreas relacionadas a ${niche}.
-- Consumo de Conteúdo: Engaja-se com tutoriais, dicas práticas, histórias de sucesso e conteúdo inspirador.
-- Dores Profundas: Baseado em "${audience}", pode incluir:
-  - ${audience.split(',')[0] || 'Falta de clareza sobre como alcançar seus objetivos.'}
-  - ${audience.split(',')[1] || 'Dificuldade em encontrar informações confiáveis e aplicáveis.'}
-  - ${audience.split(',')[2] || 'Sentimento de estagnação ou sobrecarga.'}
-- Desejos Mais Profundos: Alinhado com "${goals}", pode incluir:
-  - ${goals.split(',')[0] || 'Alcançar resultados tangíveis e duradouros.'}
-  - ${goals.split(',')[1] || 'Sentir-se capacitado e confiante.'}
-  - ${goals.split(',')[2] || 'Fazer parte de uma comunidade de apoio.'}
-- Insights de Conteúdo: Considerando "${existingContentInsights}", o público reage bem a [tipo de conteúdo que funcionou] e busca [tipo de solução].
+- Interesses: Busca ativa por soluções, aprendizado e melhoria em áreas relacionadas a ${niche}. Consome conteúdo que oferece valor prático e inspiração.
+- Consumo de Conteúdo: Engaja-se com tutoriais, dicas práticas, histórias de sucesso e conteúdo inspirador. Prefere formatos visuais e interativos.
+- Dores Profundas:
+  - ${primaryAudiencePain}: Sente-se estagnado ou sobrecarregado com ${primaryAudiencePain}.
+  - ${secondaryAudiencePain}: Luta com ${secondaryAudiencePain} e busca orientação clara.
+- Desejos Mais Profundos:
+  - ${primaryAudienceDesire}: Deseja ${primaryAudienceDesire} e ver progresso real.
+  - ${secondaryAudienceDesire}: Aspira a ${secondaryAudienceDesire} e ter mais controle sobre sua jornada em ${niche}.
+- Insights de Conteúdo: Com base em seus insights ("${existingContentInsights}"), o público reage bem a [tipo de conteúdo que funcionou] e busca [tipo de solução].
 
 **3. Onde Estão Online**
 - Instagram: Principal plataforma para descoberta, engajamento e consumo de conteúdo visual.
 - YouTube: Para tutoriais mais aprofundados e conteúdo de formato longo.
-- Blogs/Artigos: Para leitura e pesquisa detalhada.
-- Grupos e Comunidades Online: Para interação e busca de suporte.
+- Blogs/Artigos: Para leitura e pesquisa detalhada sobre ${niche}.
+- Grupos e Comunidades Online: Para interação, busca de suporte e troca de experiências.
 
 **4. Tom de Voz Preferido**
-- O cliente ideal responde melhor a um tom de voz que seja ${brandVoice}, transmitindo confiança, empatia e expertise.
+- O cliente ideal responde melhor a um tom de voz que seja ${brandVoice}, transmitindo confiança, empatia e expertise, enquanto oferece soluções para ${primaryAudiencePain}.
 
 ${refinementPrompt ? `\n**Refinamento Adicional:**\nCom base na sua solicitação de refinamento ("${refinementPrompt}"), o perfil foi ajustado para enfatizar [detalhe do ajuste].` : ''}
 `;
@@ -66,32 +71,33 @@ export const generateMonetizationIdeas = async (
   await delay(2000);
   
   const niche = capitalize(input.niche);
-  const productsAndServices = input.productsAndServices || 'sem produtos/serviços específicos mencionados';
+  const productsAndServices = input.productsAndServices || 'soluções inovadoras';
   const goals = input.goals;
   const funnelFocus = input.funnelFocus;
+  const primaryProduct = productsAndServices.split(';')[0]?.trim() || 'um produto digital';
 
   let ideas = `**Estratégias de Monetização para o Nicho de ${niche}**
 
 Estas ideias são projetadas para alinhar-se com seus objetivos de "${goals}" e seu foco de funil em "${funnelFocus}".
 
 ### Opção 1: Produtos Digitais de Alto Valor
-- **Curso Online Completo:** Um programa aprofundado sobre um aspecto chave do seu nicho, como "Domine a [Habilidade Específica] em 30 Dias".
-- **E-books e Guias Premium:** Conteúdo detalhado que resolve uma dor específica, por exemplo, "O Guia Definitivo para [Desafio Comum]".
-- **Templates e Ferramentas Exclusivas:** Recursos práticos que economizam tempo e esforço para seu público, como "Pack de Templates para [Tipo de Conteúdo]".
-- **Webinars e Workshops Pagos:** Sessões interativas ao vivo ou gravadas com foco em resultados práticos.
+- **Curso Online Completo:** Um programa aprofundado sobre um aspecto chave do seu nicho, como "Domine a [Habilidade Específica em ${niche}] em 30 Dias".
+- **E-books e Guias Premium:** Conteúdo detalhado que resolve uma dor específica, por exemplo, "O Guia Definitivo para [Desafio Comum em ${niche}]".
+- **Templates e Ferramentas Exclusivas:** Recursos práticos que economizam tempo e esforço para seu público, como "Pack de Templates para [Tipo de Conteúdo em ${niche}]".
+- **Webinars e Workshops Pagos:** Sessões interativas ao vivo ou gravadas com foco em resultados práticos, como "Workshop Intensivo de [Tópico de ${niche}]".
 
 ### Opção 2: Serviços de Consultoria e Mentoria Personalizada
-- **Mentoria Individual (1:1):** Ofereça acompanhamento personalizado para clientes que buscam resultados acelerados em ${niche}.
-- **Consultoria Estratégica:** Ajude negócios ou indivíduos a desenvolverem planos de ação específicos, por exemplo, "Consultoria de Estratégia de Conteúdo para Instagram".
-- **Programas de Acompanhamento em Grupo:** Uma opção mais acessível que a mentoria individual, mas com o benefício da comunidade.
+- **Mentoria Individual (1:1):** Ofereça acompanhamento personalizado para clientes que buscam resultados acelerados em ${niche}, focando em ${goals}.
+- **Consultoria Estratégica:** Ajude negócios ou indivíduos a desenvolverem planos de ação específicos, por exemplo, "Consultoria de Estratégia de Conteúdo para Instagram em ${niche}".
+- **Programas de Acompanhamento em Grupo:** Uma opção mais acessível que a mentoria individual, mas com o benefício da comunidade para ${niche}.
 
 ### Opção 3: Assinaturas e Comunidades Exclusivas
-- **Clube de Membros:** Crie uma área de membros com conteúdo exclusivo, aulas mensais, Q&A e networking.
-- **Newsletter Premium:** Ofereça uma versão paga da sua newsletter com insights mais aprofundados e acesso antecipado a conteúdos.
-- **Comunidade VIP:** Um grupo fechado (Telegram, Discord) para interação direta, suporte e conteúdo bônus.
+- **Clube de Membros:** Crie uma área de membros com conteúdo exclusivo, aulas mensais, Q&A e networking sobre ${niche}.
+- **Newsletter Premium:** Ofereça uma versão paga da sua newsletter com insights mais aprofundados e acesso antecipado a conteúdos sobre ${niche}.
+- **Comunidade VIP:** Um grupo fechado (Telegram, Discord) para interação direta, suporte e conteúdo bônus relacionado a ${niche}.
 
 ### Opção 4: Afiliações e Parcerias Estratégicas
-- **Marketing de Afiliados:** Promova produtos ou serviços complementares de outras marcas que você confia, ganhando comissão.
+- **Marketing de Afiliados:** Promova produtos ou serviços complementares de outras marcas que você confia, ganhando comissão em ${niche}.
 - **Parcerias com Marcas:** Colabore com empresas relevantes para seu nicho em campanhas patrocinadas ou criação de conteúdo conjunto.
 - **Venda de Produtos Físicos (se aplicável):** Se você tiver produtos físicos relacionados a ${niche}, explore a venda direta ou através de e-commerce.
 
@@ -108,20 +114,27 @@ export const generateInstagramBio = async (
   await delay(1500);
   
   const niche = capitalize(input.niche);
-  const audience = input.audience.split(',')[0] || 'seu público';
-  const goals = input.goals.split(',')[0] || 'seus objetivos';
+  const audience = input.audience.split(',')[0]?.trim() || 'seu público';
+  const goals = input.goals.split(',')[0]?.trim() || 'seus objetivos';
   const brandVoice = input.brandVoice || 'inspirador e direto';
-  const productsAndServices = input.productsAndServices.split(';')[0] || 'soluções inovadoras';
+  const productsAndServices = input.productsAndServices.split(';')[0]?.trim() || 'soluções inovadoras';
   const funnelFocus = input.funnelFocus;
+
+  // Dynamic placeholders based on input
+  const primaryPain = input.audience.split(',')[0]?.trim() || 'bloqueios criativos';
+  const primaryBenefit = input.goals.split(',')[0]?.trim() || 'crescimento e autoridade';
+  const desiredAction = (funnelFocus === 'bottom' || funnelFocus === 'middle') ? 'Conhecer meu curso/serviço' : 'Aprender mais';
+  const specificResult = input.goals.split(',')[0]?.trim() || 'sucesso no Instagram';
+  const qualityOfLife = input.audience.includes('bem-estar') ? 'mais equilibrada e feliz' : 'mais produtiva e realizada';
 
   let bioOptions = `**Opções de Bio para Instagram - Tom ${brandVoice}**
 
 Estas opções foram criadas para atrair "${audience}" e impulsionar "${goals}", com foco em "${funnelFocus}".
 
 ### Opção 1: Foco em Transformação e CTA Direto
-Transformo ${audience} de [DOR ESPECÍFICA] em [BENEFÍCIO PRINCIPAL].
+Transformo ${audience} de ${primaryPain} em ${primaryBenefit}.
 Especialista em ${niche}.
-Clique para [AÇÃO DESEJADA, ex: Conhecer meu curso / Baixar e-book] 👇
+Clique para ${desiredAction} 👇
 [Link na Bio]
 
 ---
@@ -134,7 +147,7 @@ Vamos juntos nessa jornada de sucesso!
 ---
 
 ### Opção 3: Otimizada para Vendas e Soluções
-Seu guia para [RESULTADO ESPECÍFICO] no universo de ${niche}.
+Seu guia para ${specificResult} no universo de ${niche}.
 Criadora de ${productsAndServices}.
 Garanta sua vaga/acesso agora e transforme sua realidade! 🚀
 [Link para Vendas]
@@ -143,7 +156,7 @@ Garanta sua vaga/acesso agora e transforme sua realidade! 🚀
 
 ### Opção 4: Pessoal, Engajadora e com Chamada para Comunidade
 Olá! Sou [SEU NOME] e minha paixão é ${niche}.
-Compartilho dicas práticas e inspirações para uma vida mais [QUALIDADE DE VIDA DESEJADA PELO PÚBLICO].
+Compartilho dicas práticas e inspirações para uma vida mais ${qualityOfLife}.
 Conecte-se comigo nos Stories e faça parte da nossa comunidade! 💬
 
 ${refinementPrompt ? `\n**Refinamento Adicional:**\nCom base na sua solicitação de refinamento ("${refinementPrompt}"), as bios foram ajustadas para [detalhe do ajuste].` : ''}
@@ -163,6 +176,7 @@ export const generateWeeklyStoriesStrategy = async (
   const funnelFocus = input.funnelFocus;
   const primaryPillar = contentPillars[0] || 'seu tema principal';
   const secondaryPillar = contentPillars[1] || 'um tópico relevante';
+  const productsAndServices = input.productsAndServices.split(';')[0]?.trim() || 'seus produtos/serviços';
 
   return [
     {
@@ -197,7 +211,7 @@ export const generateWeeklyStoriesStrategy = async (
       dayOfWeek: "Sexta-feira",
       objective: "Prova Social e Resultados",
       contentType: "Depoimento de Cliente / Case de Sucesso",
-      example: `Compartilhe um print de feedback positivo ou um breve case de sucesso de um cliente que usou seus ${input.productsAndServices.split(';')[0] || 'serviços/produtos'}.`,
+      example: `Compartilhe um print de feedback positivo ou um breve case de sucesso de um cliente que usou seus ${productsAndServices}.`,
       tips: `Sempre peça permissão. Destaque o problema resolvido e o benefício. Foco em Fundo de Funil (Quebra de Objeção/Vendas).`
     },
     {
@@ -288,6 +302,7 @@ export const generateEditorialCalendar = async (
   const brandVoice = input.brandVoice || 'inspirador e direto';
   const funnelFocus = input.funnelFocus;
   const baseHashtags = [`#${niche.replace(/\s/g, '')}`, `#${niche.toLowerCase().split(' ')[0]}Dicas`, `#Estrategia${niche.replace(/\s/g, '')}`];
+  const primaryProduct = input.productsAndServices.split(';')[0]?.trim() || 'seu principal produto/serviço';
 
   for (let day = 1; day <= 30; day++) {
     const weekdayIndex = (day - 1) % 7;
@@ -321,8 +336,8 @@ export const generateEditorialCalendar = async (
       stories = [`Compartilhe sua história: Use o sticker de pergunta.`, `Reaja a algumas respostas dos seguidores.`];
     } else if (day % 7 === 5) { // Sexta-feira: Prova Social/Vendas
       contentType = "Carrossel de Case de Sucesso";
-      topic = `Transformação de cliente com ${input.productsAndServices.split(';')[0] || 'seu produto/serviço'}.`;
-      caption = `Inspire-se na jornada de [Nome do Cliente]! ✨ Descubra como [ele/ela] alcançou [resultado] com meu ${input.productsAndServices.split(';')[0] || 'produto/serviço'}. Arrasta para o lado e veja a transformação! #CaseDeSucesso #ResultadosReais`;
+      topic = `Transformação de cliente com ${primaryProduct}.`;
+      caption = `Inspire-se na jornada de [Nome do Cliente]! ✨ Descubra como [ele/ela] alcançou [resultado] com meu ${primaryProduct}. Arrasta para o lado e veja a transformação! #CaseDeSucesso #ResultadosReais`;
       stories = [`Depoimento em vídeo do cliente (se disponível).`, `CTA para o produto/serviço.`];
     } else if (day % 7 === 6) { // Sábado: Lifestyle/Inspiração
       contentType = "Foto de Lifestyle";
@@ -360,8 +375,9 @@ export const generateActionPlan = async (
   const goals = input.goals;
   const proficiencyLevel = input.instagramProficiencyLevel;
   const availableResources = input.availableResources.toLowerCase();
-  const primaryProduct = input.productsAndServices.split(';')[0] || 'seu principal produto/serviço';
+  const primaryProduct = input.productsAndServices.split(';')[0]?.trim() || 'seu principal produto/serviço';
   const funnelFocus = input.funnelFocus;
+  const brandVoice = input.brandVoice || 'profissional e amigável';
 
   let adaptedTasks: { task: string; description: string; priority: 'high' | 'medium' | 'low'; }[] = [];
 
@@ -370,17 +386,17 @@ export const generateActionPlan = async (
     adaptedTasks.push(
       {
         task: "Configurar Perfil Profissional no Instagram",
-        description: "Mudar para conta profissional, preencher informações de contato, categoria e link na bio com foco em conversão para " + primaryProduct + ".",
+        description: `Mudar para conta profissional, preencher informações de contato, categoria e link na bio com foco em conversão para ${primaryProduct}.`,
         priority: "high"
       },
       {
         task: "Otimizar Bio do Instagram",
-        description: `Implementar a Bio sugerida na estratégia que melhor se alinha com seus objetivos de "${goals}" e o tom de voz "${input.brandVoice}".`,
+        description: `Implementar a Bio sugerida na estratégia que melhor se alinha com seus objetivos de "${goals}" e o tom de voz "${brandVoice}".`,
         priority: "high"
       },
       {
         task: "Criar Destaques Essenciais",
-        description: "Organizar stories em destaques temáticos como 'Sobre Mim', 'Serviços', 'Dicas Rápidas' para facilitar a navegação e educar o público sobre " + niche + ".",
+        description: `Organizar stories em destaques temáticos como 'Sobre Mim', 'Serviços', 'Dicas Rápidas' para facilitar a navegação e educar o público sobre ${niche}.`,
         priority: "medium"
       },
       {
