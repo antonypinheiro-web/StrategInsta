@@ -40,7 +40,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       const isLoginPage = currentPath === '/login';
 
       if (initialSession && isLoginPage) {
-        navigate('/', { replace: true });
+        navigate('/app', { replace: true });
       } else if (!initialSession && !isLoginPage) {
         navigate('/login', { replace: true });
       }
@@ -55,7 +55,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
         const isLoginPageOnEvent = pathOnEvent === '/login'; 
 
         if (currentSession && isLoginPageOnEvent) {
-          navigate('/', { replace: true });
+          navigate('/app', { replace: true });
         } else if (!currentSession && !isLoginPageOnEvent) {
           navigate('/login', { replace: true });
         }
