@@ -56,6 +56,19 @@
     --shadow-soft: 0 2px 10px hsl(var(--primary) / 0.1);
     --shadow-medium: 0 8px 30px hsl(var(--primary) / 0.15);
     --shadow-strong: 0 20px 60px hsl(var(--primary) / 0.2);
+
+    /* Text opacity tokens — semantic scale */
+    --text-opacity-muted: 0.6;     /* secondary text, descriptions */
+    --text-opacity-subtle: 0.4;    /* hints, placeholders, captions */
+    --text-opacity-disabled: 0.25; /* disabled / decorative */
+
+    /* Brand gradient — single source of truth */
+    --btn-gradient: linear-gradient(to right, #ec4899, #a855f7, #6366f1);
+    --btn-gradient-hover-opacity: 0.88;
+
+    /* Card elevation system */
+    --card-flat-shadow: none;
+    --card-elevated-shadow: var(--shadow-soft);
     
     /* Animation variables */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -147,5 +160,47 @@
 
   .dark .logo-theme-aware {
     filter: invert(1); /* Inverte para tema escuro (logo branca) */
+  }
+}
+
+@layer components {
+  /* ── Botão primário — fonte única de verdade ──────────────────────────────
+     Use: className="btn-gradient"
+     Nunca mais escrever from-pink-500 via-purple-500 to-indigo-500 inline.  */
+  .btn-gradient {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    background: var(--btn-gradient);
+  }
+  .btn-gradient:hover:not(:disabled) {
+    opacity: var(--btn-gradient-hover-opacity);
+  }
+
+  /* ── Cards — sistema de 2 elevações ──────────────────────────────────────
+     flat    : sem sombra, borda visível  → conteúdo interno, listas
+     elevated: sombra suave, hover lift  → cards de destaque, features     */
+  .card-flat {
+    @apply bg-card border border-border rounded-xl;
+  }
+  .card-elevated {
+    @apply bg-card border border-border rounded-xl;
+    box-shadow: var(--card-elevated-shadow);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .card-elevated:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+  }
+
+  /* ── Opacidades semânticas de texto ─────────────────────────────────────
+     Use text-muted-content, text-subtle-content, text-disabled-content
+     em vez de text-foreground/60, /40, /25 espalhados pelo código.         */
+  .text-muted-content {
+    color: hsl(var(--foreground) / var(--text-opacity-muted));
+  }
+  .text-subtle-content {
+    color: hsl(var(--foreground) / var(--text-opacity-subtle));
+  }
+  .text-disabled-content {
+    color: hsl(var(--foreground) / var(--text-opacity-disabled));
   }
 }

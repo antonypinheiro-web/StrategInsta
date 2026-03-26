@@ -98,7 +98,8 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
         <Button
           size="sm"
           onClick={onUpgrade}
-          className="shrink-0 h-7 px-3 text-xs bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white border-0"
+          variant="gradient"
+          className="shrink-0 h-7 px-3 text-xs"
         >
           <Zap className="w-3 h-3 mr-1" />
           Upgrade

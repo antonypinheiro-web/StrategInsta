@@ -547,7 +547,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <Button
                 onClick={handleGenerate}
                 disabled={!isAuthenticated}
-                className="w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:opacity-90 text-white font-bold py-3 rounded-xl text-base transition-all shadow-lg"
+                variant="gradient"
+                className="w-full font-bold py-3 rounded-xl text-base shadow-lg"
               >
                 <Sparkles className="w-5 h-5 mr-2" />
                 Gerar Minha Estratégia
@@ -595,7 +596,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     onClick={handleTextSubmit}
                     disabled={!canSend}
                     size="icon"
-                    className="bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-xl w-10 h-10 hover:opacity-90 disabled:opacity-40"
+                    variant="gradient"
+                    className="rounded-xl w-10 h-10"
                   >
                     <Send className="w-4 h-4" />
                   </Button>

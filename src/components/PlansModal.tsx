@@ -228,12 +228,8 @@ export const PlansModal: React.FC<PlansModalProps> = ({
                 <Button
                   onClick={() => handleSelectPlan(planId)}
                   disabled={isCurrent || isDowngrade || planId === 'free' || loadingPlan !== null}
-                  className={`w-full text-sm font-semibold ${
-                    isPopular && !isCurrent
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white border-0'
-                      : ''
-                  }`}
-                  variant={isPopular && !isCurrent ? 'default' : 'outline'}
+                  className="w-full text-sm font-semibold"
+                  variant={isPopular && !isCurrent ? 'gradient' : 'outline'}
                 >
                   {loadingPlan === planId ? (
                     <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Abrindo...</>

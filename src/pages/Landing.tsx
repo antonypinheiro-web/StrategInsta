@@ -128,8 +128,7 @@ export default function Landing() {
           <img src={logo} alt="StrategInsta" className="h-8 w-auto logo-theme-aware" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={goToApp}>Entrar</Button>
-            <Button size="sm" onClick={goToApp}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white border-0">
+            <Button size="sm" variant="gradient" onClick={goToApp}>
               Começar grátis
             </Button>
           </div>
@@ -161,8 +160,8 @@ export default function Landing() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
-            <Button size="lg" onClick={goToApp}
-              className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:opacity-90 text-white border-0 text-base px-8 h-13 shadow-lg shadow-purple-500/25">
+            <Button size="lg" variant="gradient" onClick={goToApp}
+              className="text-base px-8 h-13 shadow-lg shadow-purple-500/25">
               <Sparkles className="w-5 h-5 mr-2" />
               Criar minha estratégia grátis
             </Button>
@@ -226,7 +225,7 @@ export default function Landing() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
-              <div key={i} className="bg-card border border-border rounded-xl p-6 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/5 transition-all">
+              <div key={i} className="card-elevated p-6 hover:border-purple-400 transition-all">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500/10 to-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-4">
                   {f.icon}
                 </div>
@@ -327,8 +326,7 @@ export default function Landing() {
                   </ul>
 
                   <Button onClick={goToApp}
-                    className={isPopular ? "bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white border-0" : ""}
-                    variant={isPopular ? "default" : "outline"}
+                    variant={isPopular ? "gradient" : "outline"}
                     size="sm">
                     {p.price === 0 ? "Começar grátis" : `Assinar ${p.name}`}
                   </Button>

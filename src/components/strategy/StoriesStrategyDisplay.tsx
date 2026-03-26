@@ -20,7 +20,7 @@ export const StoriesStrategyDisplay: React.FC<StoriesStrategyDisplayProps> = ({ 
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-primary">{item.dayOfWeek}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-foreground/80">
+            <CardContent className="space-y-2 text-muted-content">
               <p><strong>Objetivo:</strong> {item.objective}</p>
               <p><strong>Tipo de Conteúdo:</strong> {item.contentType}</p>
               <p><strong>Exemplo:</strong> {item.example}</p>

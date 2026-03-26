@@ -27,7 +27,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   return (
     <nav className="space-y-2">
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-foreground/60 mb-3">Estratégia</h3>
+        <h3 className="text-sm font-semibold text-subtle-content mb-3">Estratégia</h3>
         {items.map((item) => {
           const isCompleted = completedSteps.has(item.id);
           const isActive = activeItem === item.id;
@@ -43,7 +43,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
                   ? 'bg-primary text-white' 
                   : isCompleted
                   ? 'text-foreground hover:bg-muted'
-                  : 'text-foreground/40 cursor-not-allowed'
+                  : 'text-disabled-content cursor-not-allowed'
               }`}
             >
               {item.icon}

@@ -13,7 +13,7 @@ export const ActionPlanDisplay: React.FC<ActionPlanDisplayProps> = ({ content })
       case 'high': return 'text-red-500';
       case 'medium': return 'text-orange-500';
       case 'low': return 'text-green-500';
-      default: return 'text-foreground/70';
+      default: return 'text-muted-content';
     }
   };
 
@@ -36,7 +36,7 @@ export const ActionPlanDisplay: React.FC<ActionPlanDisplayProps> = ({ content })
                       {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                     </span>
                   </div>
-                  <p className="text-sm text-foreground/70">{task.description}</p>
+                  <p className="text-sm text-muted-content">{task.description}</p>
                 </Card>
               ))}
             </div>

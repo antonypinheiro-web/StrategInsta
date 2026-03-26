@@ -33,7 +33,7 @@ export const StrategyDashboard: React.FC<StrategyDashboardProps> = ({
   const renderContent = () => {
     if (!contentToDisplay) {
       return (
-        <div className="flex flex-col items-center justify-center h-64 text-foreground/60">
+        <div className="flex flex-col items-center justify-center h-64 text-subtle-content">
           <Sparkles className="w-12 h-12 mb-4" />
           <p className="text-lg">Nenhum conteúdo gerado para esta seção ainda.</p>
           <p className="text-sm mt-2">Comece a gerar sua estratégia para ver os resultados aqui!</p>
@@ -58,7 +58,7 @@ export const StrategyDashboard: React.FC<StrategyDashboardProps> = ({
         return <ActionPlanDisplay content={contentToDisplay as ActionPlanItem[]} />;
       default:
         return (
-          <Card className="p-4 bg-muted/50 rounded-lg">
+          <Card className="card-flat p-4">
             <h3 className="font-semibold mb-2">Conteúdo da Estratégia</h3>
             <p className="text-sm text-foreground/70">
               Selecione uma seção na barra lateral para visualizar o conteúdo gerado.
@@ -69,7 +69,7 @@ export const StrategyDashboard: React.FC<StrategyDashboardProps> = ({
   };
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm border border-border p-6 sm:p-8 rounded-2xl shadow-lg w-full animate-fade-in">
+    <div className="card-elevated p-6 sm:p-8 w-full animate-fade-in">
       <h2 className="text-2xl font-bold text-foreground mb-4">{titleToDisplay}</h2>
       <p className="text-foreground/70 mb-6">
         {viewingHistoryItem ? `Visualizando item do histórico: ${viewingHistoryItem.title}` : `Conteúdo gerado para ${titleToDisplay}.`}

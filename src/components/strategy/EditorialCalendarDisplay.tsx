@@ -22,7 +22,7 @@ export const EditorialCalendarDisplay: React.FC<EditorialCalendarDisplayProps> =
                 Dia {dayItem.day} - {dayItem.weekday}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-foreground/80">
+            <CardContent className="space-y-2 text-muted-content">
               <p><strong>Tipo de Conteúdo:</strong> {dayItem.contentType}</p>
               <p><strong>Tópico:</strong> {dayItem.topic}</p>
               <p><strong>Legenda:</strong> {dayItem.caption}</p>

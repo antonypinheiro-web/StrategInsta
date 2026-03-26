@@ -15,7 +15,7 @@ export const InstagramBioDisplay: React.FC<InstagramBioDisplayProps> = ({ conten
     // Ignora linhas vazias
     if (line.trim() === '') return null;
     // Renderiza o restante como parágrafos
-    return <p key={index} className="text-foreground/80 mb-2 leading-relaxed">{line}</p>;
+    return <p key={index} className="text-muted-content mb-2 leading-relaxed">{line}</p>;
   };
 
   return (
