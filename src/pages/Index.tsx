@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { OnboardingWizard } from '../components/OnboardingWizard';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { StrategyDashboard } from '../components/StrategyDashboard';
@@ -25,7 +26,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { InputDialog } from '@/components/InputDialog';
 import { usePlan } from '@/hooks/usePlan';
-import type { PlanType } from '@/types/plans';
 import logo from "@/assets/logo.png";
 
 // Type Definitions
@@ -250,11 +250,18 @@ const Index: React.FC = () => {
     }
   }, [generationState, isFirstGeneration, executeGeneration]);
   
-  const handleSelectPlan = useCallback((_planId: PlanType, _billing: 'monthly' | 'yearly') => {
-    // Stripe ainda não integrado — exibe mensagem de em breve
-    toast.info('Pagamentos em breve! Entre em contato para acesso antecipado.');
-    setShowPlansModal(false);
-  }, []);
+  // Retorno do Stripe Checkout
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    if (checkout === 'success') {
+      toast.success('Assinatura ativada! Bem-vindo ao plano premium 🎉');
+      setSearchParams({}, { replace: true });
+    } else if (checkout === 'cancelled') {
+      toast.info('Checkout cancelado. Você ainda pode assinar quando quiser.');
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleStart = useCallback((input: UserInput) => {
     if (!user?.id) {
@@ -645,7 +652,6 @@ const Index: React.FC = () => {
         open={showPlansModal}
         currentPlan={plan.planType}
         onClose={() => setShowPlansModal(false)}
-        onSelectPlan={handleSelectPlan}
       />
 
       {/* Diálogo para nomear a estratégia */}

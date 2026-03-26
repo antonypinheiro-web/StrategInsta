@@ -1,15 +1,17 @@
 // StrategInsta — Modal de Planos e Upgrade
 import React, { useState } from 'react';
-import { Check, Zap, X } from 'lucide-react';
+import { Check, Zap, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import type { PlanType } from '@/types/plans';
 import { PLANS, PLAN_ORDER } from '@/types/plans';
+import { createCheckoutSession } from '@/services/stripeService';
 
 interface PlansModalProps {
   open: boolean;
   currentPlan: PlanType;
   onClose: () => void;
-  onSelectPlan: (plan: PlanType, billing: 'monthly' | 'yearly') => void;
+  onSelectPlan?: (plan: PlanType, billing: 'monthly' | 'yearly') => void;
 }
 
 export const PlansModal: React.FC<PlansModalProps> = ({
@@ -19,6 +21,26 @@ export const PlansModal: React.FC<PlansModalProps> = ({
   onSelectPlan,
 }) => {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+  const [loadingPlan, setLoadingPlan] = useState<PlanType | null>(null);
+  const { toast } = useToast();
+
+  const handleSelectPlan = async (planId: PlanType) => {
+    if (planId === 'free') return;
+    if (onSelectPlan) { onSelectPlan(planId, billing); return; }
+
+    setLoadingPlan(planId);
+    try {
+      const interval = billing === 'monthly' ? 'month' : 'year';
+      await createCheckoutSession(planId as 'individual' | 'professional' | 'agency', interval);
+    } catch (err) {
+      toast({
+        title: 'Erro ao abrir checkout',
+        description: err instanceof Error ? err.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+      setLoadingPlan(null);
+    }
+  };
 
   if (!open) return null;
 
@@ -204,8 +226,8 @@ export const PlansModal: React.FC<PlansModalProps> = ({
 
                 {/* CTA */}
                 <Button
-                  onClick={() => onSelectPlan(planId, billing)}
-                  disabled={isCurrent || isDowngrade || planId === 'free'}
+                  onClick={() => handleSelectPlan(planId)}
+                  disabled={isCurrent || isDowngrade || planId === 'free' || loadingPlan !== null}
                   className={`w-full text-sm font-semibold ${
                     isPopular && !isCurrent
                       ? 'bg-gradient-to-r from-pink-500 to-purple-600 hover:opacity-90 text-white border-0'
@@ -213,17 +235,13 @@ export const PlansModal: React.FC<PlansModalProps> = ({
                   }`}
                   variant={isPopular && !isCurrent ? 'default' : 'outline'}
                 >
-                  {isCurrent
-                    ? 'Plano atual'
-                    : isDowngrade
-                    ? 'Downgrade'
-                    : planId === 'free'
-                    ? 'Grátis'
+                  {loadingPlan === planId ? (
+                    <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Abrindo...</>
+                  ) : isCurrent ? 'Plano atual'
+                    : isDowngrade ? 'Downgrade'
+                    : planId === 'free' ? 'Grátis'
                     : (
-                      <>
-                        <Zap className="w-3.5 h-3.5 mr-1.5" />
-                        Assinar {p.name}
-                      </>
+                      <><Zap className="w-3.5 h-3.5 mr-1.5" />Assinar {p.name}</>
                     )}
                 </Button>
               </div>
