@@ -2,8 +2,10 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { OnboardingWizard } from '../components/OnboardingWizard';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { StrategyDashboard } from '../components/StrategyDashboard';
+import { CreditsBar } from '../components/CreditsBar';
+import { PlansModal } from '../components/PlansModal';
 import type { UserInput, GeneratedStrategy, ContentTableData, CalendarDay, ActionPlanItem, HistoryItem, StoriesStrategyItem } from '../types';
-import { 
+import {
     generateIdealCustomerProfile,
     generateMonetizationIdeas,
     generateInstagramBio,
@@ -14,7 +16,7 @@ import {
 } from '../services/aiService';
 import { SidebarNav, NavItem } from '../components/SidebarNav';
 import { HistoryPanel } from '../components/HistoryPanel';
-import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { User, DollarSign, Instagram, BookOpen, Calendar, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -22,7 +24,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { InputDialog } from '@/components/InputDialog';
-import logo from "@/assets/logo.png"; // Importar a logo
+import { usePlan } from '@/hooks/usePlan';
+import type { PlanType } from '@/types/plans';
+import logo from "@/assets/logo.png";
 
 // Type Definitions
 export type GenerationStep = keyof Omit<GeneratedStrategy, 'editorialCalendar' | 'contentTable' | 'actionPlan'>;
@@ -118,6 +122,8 @@ const LOCAL_STORAGE_KEY = 'strateginsta_user_input';
 
 const Index: React.FC = () => {
   const { user, isLoading: isSessionLoading } = useSession();
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const plan = usePlan(user?.id);
   const [appPhase, setAppPhase] = useState<AppPhase>('onboarding');
   const [dashboardSection, setDashboardSection] = useState<string>('idealCustomerProfile');
   const [generationState, setGenerationState] = useState<GenerationState>('idle');
@@ -244,11 +250,37 @@ const Index: React.FC = () => {
     }
   }, [generationState, isFirstGeneration, executeGeneration]);
   
+  const handleSelectPlan = useCallback((_planId: PlanType, _billing: 'monthly' | 'yearly') => {
+    // Stripe ainda não integrado — exibe mensagem de em breve
+    toast.info('Pagamentos em breve! Entre em contato para acesso antecipado.');
+    setShowPlansModal(false);
+  }, []);
+
   const handleStart = useCallback((input: UserInput) => {
     if (!user?.id) {
       setError('Erro interno: Usuário não autenticado ao iniciar a estratégia.');
       toast.error("Erro interno: Usuário não autenticado ao iniciar a estratégia.");
       return;
+    }
+
+    // ── Verificação de créditos ──────────────────────────────────────────────
+    if (!plan.canGenerate) {
+      setShowPlansModal(true);
+      toast.warning(
+        plan.planType === 'free'
+          ? 'Você usou todas as estratégias gratuitas. Faça upgrade para continuar!'
+          : 'Limite mensal atingido. Faça upgrade do seu plano.'
+      );
+      return;
+    }
+
+    // Alerta de último crédito
+    if (plan.alertLevel === 'last') {
+      toast.warning(
+        plan.planType === 'free'
+          ? '⚠️ Esta é sua última estratégia gratuita!'
+          : '⚠️ Último crédito do mês!'
+      );
     }
     isCancelledRef.current = false;
     setUserInput(input);
@@ -374,10 +406,11 @@ const Index: React.FC = () => {
     }
   }, [appPhase, finalAssetsPromise]);
   
-  const handleNameStrategyConfirm = useCallback((name: string) => {
-    saveStrategyToSupabase(name);
-    setAppPhase('dashboard'); // Mover para o dashboard após nomear e salvar
-  }, [saveStrategyToSupabase]);
+  const handleNameStrategyConfirm = useCallback(async (name: string) => {
+    await saveStrategyToSupabase(name);
+    await plan.incrementUsage(); // Incrementa crédito apenas após salvar com sucesso
+    setAppPhase('dashboard');
+  }, [saveStrategyToSupabase, plan]);
 
   const handleNameStrategySkip = useCallback(() => {
     saveStrategyToSupabase(`Estratégia ${new Date().toLocaleDateString()}`); // Salvar com nome padrão
@@ -533,6 +566,20 @@ const Index: React.FC = () => {
         </header>
 
         <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+          {/* Barra de créditos — visível quando logado */}
+          {user && !plan.isLoading && (
+            <div className="mb-6">
+              <CreditsBar
+                planType={plan.planType}
+                strategiesUsed={plan.strategiesUsed}
+                strategiesLimit={plan.strategiesLimit}
+                strategiesRemaining={plan.strategiesRemaining}
+                alertLevel={plan.alertLevel}
+                onUpgrade={() => setShowPlansModal(true)}
+              />
+            </div>
+          )}
+
           {appPhase === 'onboarding' ? (
               <OnboardingWizard onStart={handleStart} initialValues={userInput} error={error} isAuthenticated={!!user?.id} />
           ) : (
@@ -593,6 +640,14 @@ const Index: React.FC = () => {
           <div className="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[var(--gradient-from)] to-[var(--gradient-to)] opacity-30 dark:opacity-20 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
         </div>
       </div>
+      {/* Modal de planos */}
+      <PlansModal
+        open={showPlansModal}
+        currentPlan={plan.planType}
+        onClose={() => setShowPlansModal(false)}
+        onSelectPlan={handleSelectPlan}
+      />
+
       {/* Diálogo para nomear a estratégia */}
       <InputDialog
         isOpen={showNameStrategyDialog}
