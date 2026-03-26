@@ -29,7 +29,7 @@ const openaiClient = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.5-flash';
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.0-flash';
 const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL ?? 'gpt-4o-mini';
 
 // ─── Roteador principal ───────────────────────────────────────────────────────
@@ -46,20 +46,25 @@ async function callAI(systemPrompt: string, userPrompt: string): Promise<string>
     if (!text || text.trim().length < 50) throw new Error('Resposta Gemini insuficiente');
     return text;
   } catch (geminiError) {
-    console.warn('[StrategInsta] Gemini indisponível, usando OpenAI como fallback.', geminiError);
+    console.warn('[StrategInsta] Gemini falhou:', geminiError);
 
     // Fallback OpenAI
-    const completion = await openaiClient.chat.completions.create({
-      model: OPENAI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.75,
-    });
-    const text = completion.choices[0]?.message?.content ?? '';
-    if (!text || text.trim().length < 50) throw new Error('Resposta OpenAI insuficiente');
-    return text;
+    try {
+      const completion = await openaiClient.chat.completions.create({
+        model: OPENAI_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.75,
+      });
+      const text = completion.choices[0]?.message?.content ?? '';
+      if (!text || text.trim().length < 50) throw new Error('Resposta OpenAI insuficiente');
+      return text;
+    } catch (openaiError) {
+      console.error('[StrategInsta] OpenAI também falhou:', openaiError);
+      throw new Error(`Gemini: ${(geminiError as Error).message} | OpenAI: ${(openaiError as Error).message}`);
+    }
   }
 }
 
