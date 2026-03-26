@@ -11,7 +11,7 @@ import {
     generateWeeklyStoriesStrategy,
     generateEditorialCalendar,
     generateActionPlan,
-} from '../services/geminiService';
+} from '../services/aiService';
 import { SidebarNav, NavItem } from '../components/SidebarNav';
 import { HistoryPanel } from '../components/HistoryPanel';
 import { User, DollarSign, Instagram, BookOpen, Calendar, Target, Rocket, Grid, History, RefreshCcw, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
