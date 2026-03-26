@@ -123,6 +123,7 @@ const LOCAL_STORAGE_KEY = 'strateginsta_user_input';
 const Index: React.FC = () => {
   const { user, isLoading: isSessionLoading } = useSession();
   const [showPlansModal, setShowPlansModal] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const plan = usePlan(user?.id);
   const [appPhase, setAppPhase] = useState<AppPhase>('onboarding');
   const [dashboardSection, setDashboardSection] = useState<string>('idealCustomerProfile');
@@ -591,11 +592,43 @@ const Index: React.FC = () => {
               <OnboardingWizard onStart={handleStart} initialValues={userInput} error={error} isAuthenticated={!!user?.id} />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-8 items-start">
-              <aside className="lg:col-span-1 xl:col-span-1">
-                <SidebarNav 
-                  items={navItems} 
-                  activeItem={appPhase === 'dashboard' ? dashboardSection : appPhase} 
-                  setActiveItem={handleSidebarClick} 
+              {/* Botão hamburger — mobile only */}
+              <div className="lg:hidden mb-2">
+                <button
+                  onClick={() => setShowMobileSidebar(true)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card text-foreground text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                  Navegar nas seções
+                </button>
+              </div>
+
+              {/* Sidebar mobile — overlay */}
+              {showMobileSidebar && (
+                <div className="fixed inset-0 z-50 lg:hidden">
+                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowMobileSidebar(false)} />
+                  <div className="absolute left-0 top-0 h-full w-72 bg-card border-r border-border p-4 overflow-y-auto">
+                    <button onClick={() => setShowMobileSidebar(false)} className="mb-4 text-foreground/60 hover:text-foreground text-sm flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      Fechar
+                    </button>
+                    <SidebarNav
+                      items={navItems}
+                      activeItem={appPhase === 'dashboard' ? dashboardSection : appPhase}
+                      setActiveItem={(item) => { handleSidebarClick(item); setShowMobileSidebar(false); }}
+                      completedSteps={completedSteps}
+                      onReset={handleReset}
+                      isDashboard={appPhase === 'dashboard'}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <aside className="hidden lg:block lg:col-span-1 xl:col-span-1">
+                <SidebarNav
+                  items={navItems}
+                  activeItem={appPhase === 'dashboard' ? dashboardSection : appPhase}
+                  setActiveItem={handleSidebarClick}
                   completedSteps={completedSteps}
                   onReset={handleReset}
                   isDashboard={appPhase === 'dashboard'}
