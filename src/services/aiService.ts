@@ -17,8 +17,12 @@ import type {
 // ─── Roteador principal (server-side) ────────────────────────────────────────
 
 async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Usuário não autenticado');
+
   const { data, error } = await supabase.functions.invoke('call-ai', {
     body: { systemPrompt, userPrompt },
+    headers: { Authorization: `Bearer ${session.access_token}` },
   });
 
   if (error) throw new Error(error.message);
