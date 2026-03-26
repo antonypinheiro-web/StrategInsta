@@ -29,9 +29,8 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
 
   const config = {
     none: {
-      bar: 'bg-emerald-500',
-      bg: 'bg-emerald-500/10 border-emerald-500/20',
-      text: 'text-emerald-600 dark:text-emerald-400',
+      bar: 'status-success',
+      bg: 'status-success-bg',
       icon: <Sparkles className="w-4 h-4" />,
       message:
         planType === 'free'
@@ -39,16 +38,14 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
           : `${strategiesRemaining} estratégias restantes este mês`,
     },
     half: {
-      bar: 'bg-yellow-500',
-      bg: 'bg-yellow-500/10 border-yellow-500/20',
-      text: 'text-yellow-600 dark:text-yellow-400',
+      bar: 'status-warning',
+      bg: 'status-warning-bg',
       icon: <AlertTriangle className="w-4 h-4" />,
       message: `Metade dos créditos usados — ${strategiesRemaining} estratégias restantes`,
     },
     last: {
-      bar: 'bg-orange-500',
-      bg: 'bg-orange-500/10 border-orange-500/20',
-      text: 'text-orange-600 dark:text-orange-400',
+      bar: 'status-caution',
+      bg: 'status-caution-bg',
       icon: <AlertTriangle className="w-4 h-4" />,
       message:
         planType === 'free'
@@ -56,9 +53,8 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
           : '⚠️ Último crédito do mês. Considere fazer upgrade.',
     },
     blocked: {
-      bar: 'bg-red-500',
-      bg: 'bg-red-500/10 border-red-500/20',
-      text: 'text-red-600 dark:text-red-400',
+      bar: 'status-danger',
+      bg: 'status-danger-bg',
       icon: <XCircle className="w-4 h-4" />,
       message:
         planType === 'free'
@@ -70,7 +66,7 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
   return (
     <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border text-sm ${config.bg}`}>
       {/* Ícone + mensagem */}
-      <span className={`flex items-center gap-1.5 flex-1 font-medium ${config.text}`}>
+      <span className={`flex items-center gap-1.5 flex-1 font-medium`}>
         {config.icon}
         {config.message}
       </span>
@@ -79,11 +75,14 @@ export const CreditsBar: React.FC<CreditsBarProps> = ({
       <div className="hidden sm:flex items-center gap-2 shrink-0">
         <div className="w-24 h-1.5 bg-foreground/10 rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${config.bar}`}
-            style={{ width: `${pct}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${pct}%`,
+              backgroundColor: `hsl(var(--status-${alertLevel === 'none' ? 'success' : alertLevel === 'half' ? 'warning' : alertLevel === 'last' ? 'caution' : 'danger'}))`,
+            }}
           />
         </div>
-        <span className={`text-xs tabular-nums ${config.text}`}>
+        <span className={`text-xs tabular-nums ${config.bg}`}>
           {strategiesUsed}/{strategiesLimit}
         </span>
       </div>

@@ -409,7 +409,7 @@ export default function Landing() {
               Crie sua primeira estratégia grátis agora. Sem cartão de crédito.
             </p>
             <Button size="lg" onClick={goToApp}
-              className="bg-white text-purple-600 hover:bg-white/90 font-bold text-base px-10 h-13 shadow-lg">
+              className="bg-white text-primary hover:bg-white/90 font-bold text-base px-10 h-13 shadow-lg">
               <Sparkles className="w-5 h-5 mr-2" />
               Começar grátis agora
             </Button>
@@ -424,7 +424,7 @@ export default function Landing() {
           <p className="text-sm text-foreground/40 text-center">
             Desenvolvido por{" "}
             <a href="https://www.instagram.com/antonypinheiro.eu" target="_blank" rel="noopener noreferrer"
-              className="text-purple-500 hover:underline">
+              className="text-primary hover:underline">
               Antony Pinheiro
             </a>{" "}
             · © {new Date().getFullYear()} StrategInsta

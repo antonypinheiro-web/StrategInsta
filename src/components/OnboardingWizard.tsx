@@ -486,7 +486,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
           {/* Erro */}
           {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3 rounded-lg text-sm">
+            <div className="status-danger-bg border p-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -505,7 +505,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <button
                     key={opt.value}
                     onClick={() => handleSelectOption(opt)}
-                    className="w-full text-left px-4 py-2.5 rounded-xl border border-border hover:border-purple-500 hover:bg-purple-500/5 transition-all group flex items-center justify-between"
+                    className="w-full text-left px-4 py-2.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all group flex items-center justify-between"
                   >
                     <div>
                       <p className="text-sm font-medium text-foreground">{opt.label}</p>
@@ -513,7 +513,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         <p className="text-xs text-foreground/50 mt-0.5">{opt.description}</p>
                       )}
                     </div>
-                    <ChevronRight className="w-4 h-4 text-foreground/30 group-hover:text-purple-500 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-foreground/30 group-hover:text-primary transition-colors" />
                   </button>
                 ))}
               </div>
@@ -524,7 +524,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <div className="space-y-3">
                 <div
                   className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                    isDragOver ? 'border-purple-500 bg-purple-500/5' : 'border-border hover:border-purple-400'
+                    isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60'
                   }`}
                   onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFileSelect(e.dataTransfer.files); }}
                   onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
@@ -532,7 +532,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="w-6 h-6 mx-auto mb-2 text-foreground/40" />
-                  <p className="text-sm text-purple-500 font-medium">Clique para enviar arquivos</p>
+                  <p className="text-sm text-primary font-medium">Clique para enviar arquivos</p>
                   <p className="text-xs text-foreground/40 mt-1">TXT, PDF, PNG, JPG, WEBP — até 2MB, máx. 5 arquivos</p>
                 </div>
                 <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp" onChange={e => handleFileSelect(e.target.files)} className="hidden" />

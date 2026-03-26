@@ -10,9 +10,9 @@ interface ActionPlanDisplayProps {
 export const ActionPlanDisplay: React.FC<ActionPlanDisplayProps> = ({ content }) => {
   const getPriorityColor = (priority: 'high' | 'medium' | 'low') => {
     switch (priority) {
-      case 'high': return 'text-red-500';
-      case 'medium': return 'text-orange-500';
-      case 'low': return 'text-green-500';
+      case 'high': return 'status-danger';
+      case 'medium': return 'status-caution';
+      case 'low': return 'status-success';
       default: return 'text-muted-content';
     }
   };

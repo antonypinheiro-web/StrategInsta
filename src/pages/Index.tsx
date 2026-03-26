@@ -486,7 +486,7 @@ const Index: React.FC = () => {
               </Button>
             </div>
           ) : error ? (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-md mb-6 flex items-center gap-2">
+            <div className="status-danger-bg border p-4 rounded-md mb-6 flex items-center gap-2">
               <XCircle className="w-5 h-5" />
               <span>{error}</span>
             </div>

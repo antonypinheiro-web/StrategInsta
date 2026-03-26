@@ -57,6 +57,15 @@
     --shadow-medium: 0 8px 30px hsl(var(--primary) / 0.15);
     --shadow-strong: 0 20px 60px hsl(var(--primary) / 0.2);
 
+    /* Status color tokens — semantic (replaces hardcoded emerald/yellow/orange/red) */
+    --status-success: 142 71% 45%;   /* emerald-500 equivalent */
+    --status-warning: 45 93% 47%;    /* yellow-500 equivalent */
+    --status-caution: 25 95% 53%;    /* orange-500 equivalent */
+    --status-danger:  0 84% 60%;     /* red-500 equivalent */
+
+    /* Brand accent — replaces hardcoded purple-500/purple-600 */
+    --accent-brand: var(--primary);
+
     /* Text opacity tokens — semantic scale */
     --text-opacity-muted: 0.6;     /* secondary text, descriptions */
     --text-opacity-subtle: 0.4;    /* hints, placeholders, captions */
@@ -75,6 +84,11 @@
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
     --radius: 0.75rem;
+    /* Radius scale — 3 tiers */
+    --radius-sm: 0.5rem;   /* 8px  — inputs, tags, small elements */
+    --radius-md: 0.75rem;  /* 12px — buttons, cards, modals (= --radius) */
+    --radius-lg: 1rem;     /* 16px — large cards, panels */
+    --radius-xl: 1.5rem;   /* 24px — hero sections, CTA blocks */
 
     --sidebar-background: 0 0% 98%;
 
@@ -164,6 +178,14 @@
 }
 
 @layer components {
+  /* ── Escala tipográfica semântica ───────────────────────────────────────
+     Body copy  → text-sm   (14px) — padrão do app
+     Secondary  → text-xs   (12px) — captions, labels, meta
+     Heading S  → text-lg   (18px) — card titles
+     Heading M  → text-2xl  (24px) — section titles
+     Heading L  → text-4xl  (36px) — page titles
+     Hero       → text-5xl+ (48px+) — hero único por página               */
+
   /* ── Botão primário — fonte única de verdade ──────────────────────────────
      Use: className="btn-gradient"
      Nunca mais escrever from-pink-500 via-purple-500 to-indigo-500 inline.  */
@@ -189,6 +211,33 @@
   .card-elevated:hover {
     box-shadow: var(--shadow-medium);
     transform: translateY(-1px);
+  }
+
+  /* ── Status badges ──────────────────────────────────────────────────────*/
+  .status-success { color: hsl(var(--status-success)); }
+  .status-warning { color: hsl(var(--status-warning)); }
+  .status-caution { color: hsl(var(--status-caution)); }
+  .status-danger  { color: hsl(var(--status-danger));  }
+
+  .status-success-bg {
+    background-color: hsl(var(--status-success) / 0.1);
+    border-color: hsl(var(--status-success) / 0.2);
+    color: hsl(var(--status-success));
+  }
+  .status-warning-bg {
+    background-color: hsl(var(--status-warning) / 0.1);
+    border-color: hsl(var(--status-warning) / 0.2);
+    color: hsl(var(--status-warning));
+  }
+  .status-caution-bg {
+    background-color: hsl(var(--status-caution) / 0.1);
+    border-color: hsl(var(--status-caution) / 0.2);
+    color: hsl(var(--status-caution));
+  }
+  .status-danger-bg {
+    background-color: hsl(var(--status-danger) / 0.1);
+    border-color: hsl(var(--status-danger) / 0.2);
+    color: hsl(var(--status-danger));
   }
 
   /* ── Opacidades semânticas de texto ─────────────────────────────────────
