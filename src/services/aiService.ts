@@ -29,8 +29,8 @@ const openaiClient = new OpenAI({
   dangerouslyAllowBrowser: true,
 });
 
-const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-2.0-flash';
-const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL ?? 'gpt-4o-mini';
+const GEMINI_MODEL = import.meta.env.VITE_GEMINI_MODEL ?? 'gemini-1.5-flash';
+const OPENAI_MODEL = import.meta.env.VITE_OPENAI_MODEL ?? 'gpt-3.5-turbo';
 
 // ─── Roteador principal ───────────────────────────────────────────────────────
 
