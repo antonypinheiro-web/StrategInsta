@@ -1,629 +1,301 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Upload, Sparkles, Send, SkipForward, X, Instagram, ChevronRight } from "lucide-react";
-import type { UserInput, FunnelFocus, ProficiencyLevel, PostingFrequency } from "../types";
-import { funnelOptions, proficiencyLevelOptions, postingFrequencyOptions } from "../types";
+import React, { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, Save, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { funnelOptions, postingFrequencyOptions, proficiencyLevelOptions } from '../types';
+import type { UserInput } from '../types';
+import { normalizeBriefing, objectives, readBriefingDraft, saveBriefingDraft, selectObjective, toStrategyInput, validateBriefingStep } from '@/lib/briefing';
+import type { BriefingData } from '@/lib/briefing';
+import type { BriefingAttachmentService } from '@/types/briefing';
+import { AttachmentsPanel } from '@/components/briefing/AttachmentsPanel';
+import { ProfileBaselineEditor } from '@/components/briefing/ProfileBaselineEditor';
+import logo from '@/assets/logo.png';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-interface OnboardingWizardProps {
-  onStart: (data: UserInput) => void;
+interface Props {
+  onStart: (data: UserInput) => void | Promise<void>;
   initialValues?: UserInput | null;
   error?: string | null;
   isAuthenticated: boolean;
+  userId?: string;
+  toolbar?: React.ReactNode;
+  onLogout?: () => void | Promise<void>;
+  planLoading?: boolean;
+  planError?: string | null;
+  creditsRemaining?: number;
+  canGenerate?: boolean;
+  onUpgrade?: () => void;
+  previewMode?: boolean;
+  generationCost?: number;
+  attachmentService?: BriefingAttachmentService;
+  submitLabel?: string;
+  onInputChange?: (input: UserInput) => void;
 }
-
-type QuestionType = 'text' | 'textarea' | 'select';
-
-interface SelectOption {
-  value: string;
-  label: string;
-  description?: string;
-}
-
-interface ChatQuestion {
-  id: keyof UserInput;
-  block: number;
-  blockName: string;
-  question: string;
-  subtext?: string;
-  placeholder?: string;
-  type: QuestionType;
-  options?: SelectOption[];
-  required: boolean;
-  skippable?: boolean;
-  prefix?: string;
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'bot' | 'user';
-  content: string;
-  isBlock?: boolean;
-}
-
-// ─── Perguntas do Chat ────────────────────────────────────────────────────────
-
-const QUESTIONS: ChatQuestion[] = [
-  // Bloco 1 — Sobre o Negócio
-  {
-    id: 'username',
-    block: 1, blockName: 'Sobre o Negócio',
-    question: 'Qual é o seu @ no Instagram?',
-    subtext: 'Vou usar para personalizar sua estratégia.',
-    placeholder: 'seuusername',
-    type: 'text',
-    required: true,
-    prefix: '@',
-  },
-  {
-    id: 'niche',
-    block: 1, blockName: 'Sobre o Negócio',
-    question: 'Qual é o nicho ou segmento do seu negócio?',
-    subtext: 'Quanto mais específico, melhor a estratégia.',
-    placeholder: 'Ex: Fitness para mães, confeitaria artesanal, marketing digital...',
-    type: 'text',
-    required: true,
-  },
-  {
-    id: 'productsAndServices',
-    block: 1, blockName: 'Sobre o Negócio',
-    question: 'Quais são seus principais produtos ou serviços?',
-    subtext: 'Liste o que você vende ou oferece.',
-    placeholder: 'Ex: Curso de yoga online; Consultoria de marketing; E-book de receitas...',
-    type: 'textarea',
-    required: true,
-  },
-
-  // Bloco 2 — Posicionamento
-  {
-    id: 'brandVoice',
-    block: 2, blockName: 'Posicionamento',
-    question: 'Como você quer que as pessoas se sintam ao ver sua marca?',
-    subtext: 'Descreva o tom de voz e a personalidade da sua comunicação.',
-    placeholder: 'Ex: Inspirador e próximo, com humor leve. Ou: técnico e objetivo...',
-    type: 'text',
-    required: false,
-    skippable: true,
-  },
-  {
-    id: 'competitorsAndInspirations',
-    block: 2, blockName: 'Posicionamento',
-    question: 'Tem algum perfil de referência ou concorrente que admira?',
-    subtext: 'Me ajuda a entender o estilo que você quer alcançar.',
-    placeholder: 'Ex: @perfil_x (gosto da estética), @concorrente_y (quero ser diferente deles)...',
-    type: 'text',
-    required: false,
-    skippable: true,
-  },
-
-  // Bloco 3 — Público-Alvo
-  {
-    id: 'audience',
-    block: 3, blockName: 'Público-Alvo',
-    question: 'Descreva seu cliente ideal — quem é essa pessoa?',
-    subtext: 'Inclua idade, perfil, dores, desejos e sonhos.',
-    placeholder: 'Ex: Mulheres de 28-40 anos, empreendedoras, que querem organizar a rotina e crescer no digital...',
-    type: 'textarea',
-    required: true,
-  },
-
-  // Bloco 4 — Conteúdo
-  {
-    id: 'contentPillars',
-    block: 4, blockName: 'Conteúdo',
-    question: 'Quais são os temas principais do seu conteúdo?',
-    subtext: 'Os pilares que você sempre aborda, de 3 a 5 temas.',
-    placeholder: 'Ex: Bem-estar, alimentação saudável, mindfulness, rotina produtiva...',
-    type: 'text',
-    required: false,
-    skippable: true,
-  },
-  {
-    id: 'existingContentInsights',
-    block: 4, blockName: 'Conteúdo',
-    question: 'O que já funcionou (ou não) no seu conteúdo?',
-    subtext: 'Compartilhe insights sobre seus posts anteriores, se tiver.',
-    placeholder: 'Ex: Reels curtos de dicas têm muito alcance. Textos longos não performam bem...',
-    type: 'textarea',
-    required: false,
-    skippable: true,
-  },
-  {
-    id: 'desiredPostingFrequency',
-    block: 4, blockName: 'Conteúdo',
-    question: 'Com que frequência você consegue postar no feed?',
-    type: 'select',
-    options: postingFrequencyOptions,
-    required: true,
-  },
-  {
-    id: 'availableResources',
-    block: 4, blockName: 'Conteúdo',
-    question: 'Quanto tempo por semana você dedica à criação de conteúdo?',
-    placeholder: 'Ex: 3-4 horas por semana, um dia inteiro, pouco tempo...',
-    type: 'text',
-    required: false,
-    skippable: true,
-  },
-
-  // Bloco 5 — Objetivos
-  {
-    id: 'goals',
-    block: 5, blockName: 'Objetivos',
-    question: 'Qual é o seu principal objetivo com o Instagram agora?',
-    subtext: 'Seja específico — isso define toda a estratégia.',
-    placeholder: 'Ex: Vender meu curso, construir autoridade, crescer para 10k seguidores...',
-    type: 'text',
-    required: true,
-  },
-  {
-    id: 'funnelFocus',
-    block: 5, blockName: 'Objetivos',
-    question: 'Em qual etapa da jornada do cliente quero focar a estratégia?',
-    type: 'select',
-    options: funnelOptions,
-    required: true,
-  },
-  {
-    id: 'instagramProficiencyLevel',
-    block: 5, blockName: 'Objetivos',
-    question: 'Qual é o seu nível de experiência no Instagram?',
-    subtext: 'Isso ajusta o plano de ação para o seu momento.',
-    type: 'select',
-    options: proficiencyLevelOptions,
-    required: true,
-  },
+type TextFieldKey = Exclude<keyof BriefingData, 'baseline' | 'attachments'>;
+const steps = ['Negócio', 'Situação', 'Objetivo', 'Recursos', 'Revisão'];
+const titles = ['Vamos conhecer seu negócio.', 'Onde o negócio está hoje?', 'Qual é a prioridade deste ciclo?', 'O que é possível colocar em prática?', 'Revise antes de gerar.'];
+const subtitles = ['Comece pelo negócio. O restante da estratégia parte daqui.', 'Conte o que você sabe. As lacunas também ajudam a orientar a estratégia.', 'Escolha um objetivo principal para orientar a estratégia.', 'Um plano útil precisa caber na rotina de quem vai executar.', 'Confira as respostas e os limites do seu plano antes de continuar.'];
+const help = [
+  ['O negócio vem primeiro', 'O que a marca oferece e para quem ela existe orientam as próximas decisões. O perfil do Instagram é opcional.'],
+  ['Contexto, não adivinhação', 'Resultados observados são diferentes de expectativas. Se ainda não houver dados, sinalize isso em vez de estimar.'],
+  ['Uma decisão por vez', 'O objetivo define o foco. Os recursos disponíveis ajudam a ajustar o plano à realidade do seu negócio.'],
+  ['Consistência possível', 'Informe tempo, equipe e disponibilidade para gravar. A estratégia deve se adaptar aos recursos, não o contrário.'],
+  ['Você mantém o controle', 'As recomendações da IA precisam de revisão. Informações não definidas são lacunas, não fatos.'],
 ];
 
-const TOTAL_QUESTIONS = QUESTIONS.length;
-
-// ─── Estado inicial ───────────────────────────────────────────────────────────
-
-const EMPTY_FORM: UserInput = {
-  niche: '',
-  audience: '',
-  username: '',
-  goals: '',
-  funnelFocus: 'balanced',
-  brandVoice: '',
-  productsAndServices: '',
-  existingContentInsights: '',
-  competitorsAndInspirations: '',
-  contentPillars: '',
-  desiredPostingFrequency: '3x_semana',
-  availableResources: '',
-  instagramProficiencyLevel: 'intermediario',
-};
-
-// ─── Componente Principal ─────────────────────────────────────────────────────
-
-export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
-  onStart,
-  initialValues,
-  error,
-  isAuthenticated,
-}) => {
-  const [formData, setFormData] = useState<UserInput>({
-    ...EMPTY_FORM,
-    ...(initialValues ?? {}),
+export function OnboardingWizard({ onStart, initialValues, error, isAuthenticated, userId, toolbar, onLogout,
+  planLoading = false, planError, creditsRemaining, canGenerate = true, onUpgrade, previewMode = false,
+  generationCost = 20, attachmentService, submitLabel, onInputChange }: Props) {
+  const [initial] = useState(() => {
+    let draft = null;
+    try { draft = readBriefingDraft(window.localStorage, userId); } catch { /* Storage may be disabled. */ }
+    return initialValues ? { data: normalizeBriefing(initialValues), step: 0 } : draft ?? { data: normalizeBriefing(null), step: 0 };
   });
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [inputValue, setInputValue] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [showFileUpload, setShowFileUpload] = useState(false);
-  const [isDone, setIsDone] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const currentQuestion = QUESTIONS[currentIndex];
-  const progress = Math.round((currentIndex / TOTAL_QUESTIONS) * 100);
-
-  // ─── Auto-scroll ────────────────────────────────────────────────────────────
-
+  const [data, setData] = useState<BriefingData>(initial.data);
+  const [previewDraft, setPreviewDraft] = useState(() => {
+    if (!import.meta.env.DEV || import.meta.env.MODE !== 'development' || previewMode || !isAuthenticated) return null;
+    try { return readBriefingDraft(window.localStorage, 'local-ui-fixture'); } catch { return null; }
+  });
+  const [step, setStep] = useState<number>(initial.step);
+  const [errors, setErrors] = useState<Partial<Record<keyof BriefingData, string>>>({});
+  const [message, setMessage] = useState('');
+  const [paused, setPaused] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState(false);
+  const [lastSaved, setLastSaved] = useState(JSON.stringify(initial.data));
+  const heading = useRef<HTMLHeadingElement>(null);
+  const submitted = useRef(false);
+  const dirty = JSON.stringify(data) !== lastSaved;
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  // ─── Init — primeira mensagem ────────────────────────────────────────────────
-
+    if (!onInputChange) return;
+    try { onInputChange(toStrategyInput(data)); } catch { /* Incomplete steps are not generation context. */ }
+  }, [data, onInputChange]);
   useEffect(() => {
-    const greeting: ChatMessage = {
-      id: 'greeting',
-      role: 'bot',
-      content: '👋 Olá! Sou o assistente do StrategInsta.\n\nVou te fazer algumas perguntas para criar uma estratégia de conteúdo totalmente personalizada para o seu Instagram.\n\nSão rápidas — menos de 3 minutos. Vamos lá?',
-    };
-    setMessages([greeting]);
-
-    setTimeout(() => {
-      pushBotMessage(QUESTIONS[0]);
-    }, 800);
-  }, []);
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-  function pushBotMessage(question: ChatQuestion, prevBlock?: number) {
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => {
-        const next: ChatMessage[] = [];
-
-        // Separador de bloco
-        if (prevBlock === undefined || question.block !== prevBlock) {
-          next.push({
-            id: `block-${question.block}`,
-            role: 'bot',
-            content: `— Bloco ${question.block} de 5: **${question.blockName}**`,
-            isBlock: true,
-          });
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  useEffect(() => { heading.current?.focus(); }, [step, paused]);
+  function update(key: TextFieldKey, value: string) {
+    setData((previous) => ({ ...previous, [key]: value }));
+    setErrors((previous) => ({ ...previous, [key]: undefined })); setMessage('');
+  }
+  function move(target: number) {
+    if (target > step) {
+      for (let index = 0; index < target; index++) {
+        const issues = validateBriefingStep(data, index);
+        if (Object.keys(issues).length) {
+          setStep(index); setErrors(issues); setMessage('Confira os campos indicados antes de continuar.'); return;
         }
-
-        next.push({
-          id: `q-${question.id}`,
-          role: 'bot',
-          content: question.question + (question.subtext ? `\n\n_${question.subtext}_` : ''),
-        });
-
-        return [...prev, ...next];
-      });
-    }, 600);
-  }
-
-  function pushUserMessage(content: string) {
-    setMessages(prev => [
-      ...prev,
-      { id: `u-${Date.now()}`, role: 'user', content },
-    ]);
-  }
-
-  function saveAnswer(questionId: keyof UserInput, value: string) {
-    setFormData(prev => ({ ...prev, [questionId]: value }));
-  }
-
-  function advance(answer: string, displayValue?: string) {
-    const q = QUESTIONS[currentIndex];
-    saveAnswer(q.id, answer);
-    pushUserMessage(displayValue ?? answer);
-    setInputValue('');
-
-    const nextIndex = currentIndex + 1;
-
-    if (nextIndex >= TOTAL_QUESTIONS) {
-      // Todas as perguntas respondidas → arquivo opcional
-      setCurrentIndex(nextIndex);
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [
-          ...prev,
-          {
-            id: 'files-msg',
-            role: 'bot',
-            content: '✅ Ótimo! Tenho tudo que preciso.\n\nSe quiser, você pode enviar arquivos de referência (briefing, identidade visual, posts anteriores...) para enriquecer ainda mais a estratégia. É opcional.',
-          },
-        ]);
-        setShowFileUpload(true);
-      }, 600);
-    } else {
-      setCurrentIndex(nextIndex);
-      pushBotMessage(QUESTIONS[nextIndex], q.block);
+      }
     }
+    setErrors({}); setMessage(''); setStep(target);
   }
-
-  function handleSkip() {
-    const q = QUESTIONS[currentIndex];
-    saveAnswer(q.id, '');
-    pushUserMessage('_(pulei esta pergunta)_');
-    setInputValue('');
-
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= TOTAL_QUESTIONS) {
-      setCurrentIndex(nextIndex);
-      setIsTyping(true);
-      setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [
-          ...prev,
-          {
-            id: 'files-msg',
-            role: 'bot',
-            content: '✅ Perfeito! Tenho tudo que preciso.\n\nSe quiser, envie arquivos de referência para enriquecer a estratégia. Mas pode pular se preferir.',
-          },
-        ]);
-        setShowFileUpload(true);
-      }, 600);
-    } else {
-      setCurrentIndex(nextIndex);
-      pushBotMessage(QUESTIONS[nextIndex], q.block);
-    }
+  function choose(value: string) { setData(selectObjective(data, value)); setErrors({}); setMessage(''); }
+  function saveAndExit() {
+    try {
+      saveBriefingDraft(window.localStorage, userId ?? '', data, step);
+      setLastSaved(JSON.stringify(data)); setPaused(true); setMessage('');
+    } catch { setMessage('Não foi possível salvar neste navegador. Suas respostas continuam nesta tela.'); }
   }
-
-  function handleTextSubmit() {
-    const val = inputValue.trim();
-    if (!val && currentQuestion?.required) return;
-    if (!val && !currentQuestion?.required) {
-      handleSkip();
-      return;
-    }
-    advance(val);
+  function requestLogout() {
+    if (dirty && !window.confirm('Sair sem salvar as respostas? Cancele e use "Salvar e sair" para guardar o briefing neste navegador.')) return;
+    void onLogout?.();
   }
-
-  function handleSelectOption(option: SelectOption) {
-    advance(option.value, option.label);
+  function importPreview() {
+    if (!previewDraft || !isAuthenticated) return;
+    if (!window.confirm('Carregar as respostas da prévia nesta tela para revisão? As respostas atuais da tela serão substituídas. Nenhum crédito será consumido.')) return;
+    setData(previewDraft.data); setStep(previewDraft.step); setPaused(false);
+    setErrors({}); setPreviewDraft(null);
+    setMessage('Respostas da prévia carregadas. Revise, salve na sua conta e confira o saldo antes de gerar.');
   }
-
-  function handleGenerate() {
-    setIsDone(true);
-    onStart(formData);
+  async function generate() {
+    if (submitted.current || !isAuthenticated || !canGenerate || planLoading || planError) return;
+    if (pendingAttachments) { setMessage('Aprove ou retire os anexos pendentes antes de gerar.'); return; }
+    try {
+      const input = toStrategyInput(data); submitted.current = true; setBusy(true); await onStart(input);
+    } catch (failure) { setMessage(failure instanceof Error ? failure.message : 'Não foi possível iniciar. Suas respostas foram mantidas.'); }
+    finally { submitted.current = false; setBusy(false); }
   }
-
-  function handleSkipFiles() {
-    setShowFileUpload(false);
-    setIsDone(true);
-    setMessages(prev => [
-      ...prev,
-      { id: 'u-skipfiles', role: 'user', content: '_(sem arquivos)_' },
-      {
-        id: 'ready',
-        role: 'bot',
-        content: '🚀 Tudo pronto! Clique em **Gerar Minha Estratégia** para criar seu plano personalizado.',
-      },
-    ]);
+  function field(key: TextFieldKey, label: string, placeholder: string, multiline = false) {
+    const Component = multiline ? Textarea : Input;
+    return <div className="space-y-2" key={key}>
+      <label htmlFor={'briefing-' + key} className="block text-sm font-semibold">{label}</label>
+      <Component id={'briefing-' + key} value={data[key] ?? ''} onChange={(event) => update(key, event.target.value)}
+        placeholder={placeholder} maxLength={5000} aria-invalid={!!errors[key]} aria-describedby={errors[key] ? 'error-' + key : undefined}
+        className={'rounded-xl border-border bg-muted/20 text-base ' + (multiline ? 'min-h-[100px] resize-y' : 'h-12')} />
+      {errors[key] && <p id={'error-' + key} className="text-sm text-destructive">{errors[key]}</p>}
+    </div>;
   }
-
-  // ─── File handlers ───────────────────────────────────────────────────────────
-
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return;
-    const valid = Array.from(files)
-      .filter(f => {
-        const types = ['text/plain', 'text/markdown', 'application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
-        return types.includes(f.type) && f.size <= 2 * 1024 * 1024;
-      })
-      .slice(0, 5);
-    setFormData(prev => ({ ...prev, files: valid }));
-    setShowFileUpload(false);
-    setIsDone(true);
-    setMessages(prev => [
-      ...prev,
-      { id: 'u-files', role: 'user', content: `📎 ${valid.length} arquivo(s) enviado(s)` },
-      {
-        id: 'ready',
-        role: 'bot',
-        content: '🚀 Perfeito! Clique em **Gerar Minha Estratégia** para criar seu plano personalizado.',
-      },
-    ]);
-  };
-
-  // ─── Render ───────────────────────────────────────────────────────────────────
-
-  const isSelectQuestion = currentQuestion?.type === 'select';
-  const isSkippable = currentQuestion?.skippable && !currentQuestion?.required;
-  const canSend = inputValue.trim().length > 0 || isSkippable;
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl flex flex-col h-[90vh] max-h-[750px] rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-
-        {/* ── Header ── */}
-        <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 p-4 flex items-center gap-3">
-          <div className="bg-white/20 rounded-full p-2">
-            <Instagram className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="text-white font-semibold text-sm">StrategInsta</p>
-            <p className="text-white/70 text-xs">Assistente de Estratégia</p>
-          </div>
-          {currentIndex > 0 && (
-            <div className="text-right">
-              <p className="text-white/80 text-xs mb-1">{progress}% concluído</p>
-              <div className="w-32 h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-white rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Mensagens ── */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 scroll-smooth">
-
-          {messages.map(msg => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              {msg.isBlock ? (
-                <div className="w-full flex items-center gap-2 py-1">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-foreground/40 font-medium whitespace-nowrap px-2">
-                    {msg.content.replace('**', '').replace('**', '')}
-                  </span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-              ) : (
-                <div
-                  className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                    msg.role === 'bot'
-                      ? 'bg-muted text-foreground rounded-tl-sm'
-                      : 'bg-gradient-to-br from-pink-500 to-purple-600 text-white rounded-tr-sm'
-                  }`}
-                >
-                  {msg.content
-                    .split(/(\*\*.*?\*\*|_.*?_)/g)
-                    .map((part, i) => {
-                      if (part.startsWith('**') && part.endsWith('**'))
-                        return <strong key={i}>{part.slice(2, -2)}</strong>;
-                      if (part.startsWith('_') && part.endsWith('_'))
-                        return <em key={i} className="opacity-70">{part.slice(1, -1)}</em>;
-                      return part;
-                    })}
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Typing indicator */}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-muted px-4 py-3 rounded-2xl rounded-tl-sm flex gap-1">
-                <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 bg-foreground/30 rounded-full animate-bounce [animation-delay:300ms]" />
-              </div>
-            </div>
-          )}
-
-          {/* Erro */}
-          {error && (
-            <div className="status-danger-bg border p-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* ── Área de Input ── */}
-        {!isTyping && (
-          <div className="border-t border-border p-4 bg-card">
-
-            {/* Select options */}
-            {isSelectQuestion && currentQuestion && !showFileUpload && !isDone && (
-              <div className="space-y-2 mb-2">
-                {currentQuestion.options?.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleSelectOption(opt)}
-                    className="w-full text-left px-4 py-2.5 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all group flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{opt.label}</p>
-                      {opt.description && (
-                        <p className="text-xs text-foreground/50 mt-0.5">{opt.description}</p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-foreground/30 group-hover:text-primary transition-colors" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* File upload */}
-            {showFileUpload && (
-              <div className="space-y-3">
-                <div
-                  className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                    isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/60'
-                  }`}
-                  onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFileSelect(e.dataTransfer.files); }}
-                  onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-                  onDragLeave={() => setIsDragOver(false)}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <Upload className="w-6 h-6 mx-auto mb-2 text-foreground/40" />
-                  <p className="text-sm text-primary font-medium">Clique para enviar arquivos</p>
-                  <p className="text-xs text-foreground/40 mt-1">TXT, PDF, PNG, JPG, WEBP — até 2MB, máx. 5 arquivos</p>
-                </div>
-                <input ref={fileInputRef} type="file" multiple accept=".txt,.md,.pdf,.png,.jpg,.jpeg,.webp" onChange={e => handleFileSelect(e.target.files)} className="hidden" />
-                <Button variant="ghost" size="sm" className="w-full text-foreground/50" onClick={handleSkipFiles}>
-                  Pular, não tenho arquivos agora
-                </Button>
-              </div>
-            )}
-
-            {/* Botão gerar estratégia */}
-            {isDone && (
-              <Button
-                onClick={handleGenerate}
-                disabled={!isAuthenticated}
-                variant="gradient"
-                className="w-full font-bold py-3 rounded-xl text-base shadow-lg"
-              >
-                <Sparkles className="w-5 h-5 mr-2" />
-                Gerar Minha Estratégia
-              </Button>
-            )}
-
-            {/* Input de texto */}
-            {!isSelectQuestion && !showFileUpload && !isDone && currentQuestion && (
-              <div className="flex gap-2 items-end">
-                <div className="flex-1 relative">
-                  {currentQuestion.prefix && (
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/50 text-sm z-10">
-                      {currentQuestion.prefix}
-                    </span>
-                  )}
-                  {currentQuestion.type === 'textarea' ? (
-                    <Textarea
-                      value={inputValue}
-                      onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleTextSubmit();
-                        }
-                      }}
-                      placeholder={currentQuestion.placeholder}
-                      className="resize-none min-h-[80px] rounded-xl pr-4"
-                      rows={3}
-                      autoFocus
-                    />
-                  ) : (
-                    <Input
-                      value={inputValue}
-                      onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleTextSubmit()}
-                      placeholder={currentQuestion.placeholder}
-                      className={`rounded-xl ${currentQuestion.prefix ? 'pl-7' : ''}`}
-                      autoFocus
-                    />
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <Button
-                    onClick={handleTextSubmit}
-                    disabled={!canSend}
-                    size="icon"
-                    variant="gradient"
-                    className="rounded-xl w-10 h-10"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                  {isSkippable && (
-                    <Button
-                      onClick={handleSkip}
-                      size="icon"
-                      variant="ghost"
-                      className="rounded-xl w-10 h-10 text-foreground/30 hover:text-foreground/60"
-                      title="Pular esta pergunta"
-                    >
-                      <SkipForward className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Hint de atalho */}
-            {!isSelectQuestion && !showFileUpload && !isDone && currentQuestion?.type === 'text' && (
-              <p className="text-xs text-foreground/30 text-center mt-2">Enter para enviar{isSkippable ? ' · ↷ para pular' : ''}</p>
-            )}
-          </div>
-        )}
-
+  function select(key: TextFieldKey, label: string, options: { value: string; label: string }[]) {
+    return <div className="space-y-2">
+      <label htmlFor={'briefing-' + key} className="block text-sm font-semibold">{label}</label>
+      <select id={'briefing-' + key} value={data[key]} onChange={(event) => update(key, event.target.value)} aria-invalid={!!errors[key]}
+        aria-describedby={errors[key] ? 'error-' + key : undefined}
+        className="h-12 w-full rounded-xl border border-input bg-background px-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <option value="">Selecione uma opção</option>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      {errors[key] && <p id={'error-' + key} className="text-sm text-destructive">{errors[key]}</p>}
+    </div>;
+  }
+  const review: [string, string, number][] = [
+    ['Negócio', [data.brandName || data.username, data.niche, data.productsAndServices, data.businessStage, data.serviceArea,
+      data.differentiators && 'Diferencial: ' + data.differentiators, data.availableProof && 'Provas disponíveis: ' + data.availableProof,
+      data.communicationRestrictions && 'Restrições: ' + data.communicationRestrictions].filter(Boolean).join('\n'), 0],
+    ['Situação', [data.audience, data.customerProblem && 'Problema: ' + data.customerProblem, data.mainObstacle && 'Obstáculo: ' + data.mainObstacle,
+      data.purchaseProcess && 'Compra: ' + data.purchaseProcess, data.currentBio && 'Bio atual: ' + data.currentBio,
+      data.existingContentInsights && 'Tentativas e resultados: ' + data.existingContentInsights].filter(Boolean).join('\n'), 1],
+    ['Objetivo', [data.goals, data.conversionDestination && 'Próximo passo: ' + data.conversionDestination,
+      data.successSignal && 'Sinal de avanço: ' + data.successSignal].filter(Boolean).join('\n'), 2],
+    ['Recursos', [(data.desiredPostingFrequency === 'personalizado' ? 'Definir com a estratégia' : postingFrequencyOptions.find((item) => item.value === data.desiredPostingFrequency)?.label ?? 'Não definido'),
+      data.weeklyTime, data.availableResources, data.recordingComfort, data.capacityToServe].filter(Boolean).join('\n'), 3],
+  ];
+  return <section className="briefing-workspace min-h-screen bg-background text-foreground">
+    <header className="border-b border-border">
+      <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-12">
+        <div className="flex items-center gap-5"><img src={logo} alt="StrategInsta" className="logo-theme-aware h-8 w-auto sm:h-9" />
+          <span className="hidden border-l border-border pl-5 text-sm text-muted-foreground sm:inline">Briefing do negócio</span></div>
+        <div className="flex flex-wrap items-center gap-2">{toolbar}{onLogout && <Button variant="ghost" onClick={requestLogout} disabled={busy}>Sair</Button>}{!paused && <Button variant="ghost" onClick={saveAndExit} disabled={!isAuthenticated || busy}><Save className="mr-2 h-4 w-4" />Salvar e sair</Button>}</div>
       </div>
-    </div>
-  );
-};
+    </header>
+    {previewDraft && <div className="mx-auto my-5 max-w-[1096px] rounded-xl border border-primary/30 bg-muted/30 p-5 text-sm">
+      <p className="font-semibold">Há um briefing salvo na prévia deste navegador.</p>
+      <p className="mt-2 break-words text-muted-foreground">Marca: {previewDraft.data.brandName || previewDraft.data.username || 'não informada'}. A importação só preenche o formulário, sem gerar ou gastar créditos.</p>
+      <Button className="mt-3" variant="outline" onClick={importPreview}>Trazer respostas da prévia</Button>
+    </div>}
+    {paused ? <div className="mx-auto max-w-xl px-5 py-24">
+      <h1 ref={heading} tabIndex={-1} className="text-3xl font-bold outline-none">Seu rascunho está salvo.</h1>
+      <p className="mt-4 leading-7 text-muted-foreground">Ele fica neste navegador, associado à sua conta. Não está sincronizado com outros dispositivos. Você pode fechar esta aba ou continuar agora.</p>
+      <Button variant="gradient" className="mt-8" onClick={() => setPaused(false)}>Continuar briefing<ArrowRight className="ml-2 h-4 w-4" /></Button>
+    </div> : <div className="mx-auto max-w-[1160px] px-5 pb-10 sm:px-8">
+      <nav aria-label="Etapas do briefing" className="py-6"><ol className="grid grid-cols-5">
+        {steps.map((label, index) => <li key={label} className="relative text-center">
+          <button type="button" onClick={() => move(index)} aria-current={index === step ? 'step' : undefined}
+            className="relative z-10 flex w-full flex-col items-center gap-3 rounded-md px-1 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:text-sm">
+            <span className={index <= step ? 'font-medium text-foreground' : 'text-muted-foreground'}>{label}</span>
+            <span style={index < step ? { background: 'var(--btn-gradient)' } : undefined} className={'flex h-8 w-8 items-center justify-center rounded-full border-2 bg-background font-semibold ' + (index < step ? 'border-transparent text-white' : index === step ? 'border-primary text-primary' : 'border-border text-muted-foreground')}>
+              {index < step ? <Check className="h-4 w-4" aria-hidden="true" /> : index + 1}</span>
+          </button>
+          {index < 4 && <span aria-hidden="true" className={'absolute left-1/2 top-[55px] h-px w-full sm:top-[57px] ' + (index < step ? 'bg-primary' : 'bg-border')} />}
+        </li>)}
+      </ol></nav>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(220px,0.85fr)] lg:gap-14">
+        <div className="min-w-0">
+          <h1 ref={heading} tabIndex={-1} className="text-2xl font-bold tracking-tight outline-none sm:text-[32px] sm:leading-tight">{previewMode && step === 4 ? 'Salve antes de ir para o app real.' : step === 4 && generationCost === 0 ? 'Revise antes de salvar.' : titles[step]}</h1>
+          <p className="mb-8 mt-3 text-sm leading-6 text-muted-foreground sm:text-base">{previewMode && step === 4 ? 'Você pode aproveitar estas respostas no app real após entrar na sua conta.' : subtitles[step]}</p>
+          <div className="space-y-6">
+            {step === 0 && <>
+              {field('brandName', 'Nome da marca', 'Como sua marca se apresenta?')}
+              {field('username', 'Instagram (opcional)', '@perfil')}
+              <p className="text-xs leading-5 text-muted-foreground">O @ identifica seu perfil no briefing. A consulta automática ao Instagram ainda não está conectada. Inclua resultados observados na próxima etapa.</p>
+              {field('niche', 'Segmento do negócio', 'Ex.: cerâmica artesanal para casa')}
+              {field('productsAndServices', 'O que a marca oferece?', 'Produtos, serviços e a oferta que merece prioridade.', true)}
+              <Button variant="link" className="h-auto p-0" onClick={() => update('productsAndServices', 'Ainda vou lançar. A oferta precisa ser validada antes de ampliar o negócio.')}>Ainda vou lançar minha oferta</Button>
+              {field('differentiators', 'Por que alguém escolheria sua oferta?', 'Diferenciais que consegue demonstrar, sem precisar ser algo exclusivo.', true)}
+              <Button variant="link" className="h-auto p-0" onClick={() => update('differentiators', 'Preciso descobrir meu diferencial. Tratar sugestões como hipóteses para validar.')}>Preciso descobrir meu diferencial</Button>
+              <details className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-medium">Momento do negócio, atendimento e provas (opcional)</summary><div className="mt-5 space-y-5">
+                {select('businessStage', 'Em que momento está o negócio?', [
+                  { value: 'Ainda vou lançar a primeira oferta', label: 'Vou lançar a primeira oferta' },
+                  { value: 'Começando, com primeiras vendas', label: 'Começando, com primeiras vendas' },
+                  { value: 'Já vendo regularmente', label: 'Já vendo regularmente' },
+                  { value: 'Negócio estabelecido, lançando uma nova oferta', label: 'Lançando uma nova oferta em negócio existente' }])}
+                {field('serviceArea', 'Onde e como atende?', 'Ex.: presencial em Curitiba; online em todo o Brasil.')}
+                {field('availableProof', 'Que provas você pode usar?', 'Credenciais, demonstrações ou depoimentos com autorização. Deixe vazio se não houver.', true)}
+                {field('communicationRestrictions', 'Há restrições de comunicação?', 'Promessas que deve evitar, regras do setor ou informações confidenciais.', true)}
+              </div></details>
+            </>}
+            {step === 1 && <>
+              {field('audience', 'Quem compra ou você pretende alcançar?', 'Descreva o público com base no que você sabe.', true)}
+              <Button variant="link" className="h-auto p-0" onClick={() => update('audience', 'Público ainda não definido. Validar as hipóteses da estratégia.')}>Ainda não conheço o público</Button>
+              {field('customerProblem', 'Qual problema você ajuda essa pessoa a resolver?', 'Descreva a situação que leva alguém a procurar sua oferta.', true)}
+              <Button variant="link" className="h-auto p-0" onClick={() => update('customerProblem', 'Problema do cliente ainda não validado. Preciso de hipóteses para investigar.')}>Ainda não sei definir o problema</Button>
+              {field('mainObstacle', 'Qual é o principal obstáculo?', 'O que dificulta o avanço hoje?', true)}
+              <Button variant="link" className="h-auto p-0" onClick={() => update('mainObstacle', 'Ainda não sei qual é o principal obstáculo. Preciso investigar antes de concluir.')}>Ainda não sei o que dificulta o avanço</Button>
+              {field('existingContentInsights', 'O que já foi tentado? (opcional)', 'Ações realizadas e resultados observados, se houver.', true)}
+              <details className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-medium">Como a compra acontece e bio atual (opcional)</summary><div className="mt-5 space-y-5">
+                {field('purchaseProcess', 'Como a pessoa decide e compra?', 'Quem usa, quem decide e quanto precisa conversar antes de comprar.', true)}
+                {field('salesChannels', 'Por onde vende hoje?', 'Ex.: WhatsApp, loja física, site, indicação.')}
+                {field('currentBio', 'Bio atual do Instagram', 'Cole o texto como está no perfil.', true)}
+              </div></details>
+              <ProfileBaselineEditor value={data.baseline} onChange={(baseline) => setData((previous) => ({ ...previous, baseline }))} />
+              <details className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-medium">Tom de voz, referências e temas (opcional)</summary><div className="mt-5 space-y-5">
+                {field('brandVoice', 'Tom de voz', 'Como a marca deve se comunicar?')}
+                {field('competitorsAndInspirations', 'Concorrentes e referências', 'Perfis e o que você observa neles.', true)}
+                {field('contentPillars', 'Temas já trabalhados', 'Deixe em branco se espera sugestões da estratégia.')}
+              </div></details>
+            </>}
+            {step === 2 && <>
+              <fieldset aria-label="Objetivo principal" className="overflow-hidden rounded-xl border border-border bg-muted/10">
+                {objectives.map((option) => <label key={option.value} className="flex cursor-pointer gap-4 border-b border-border px-5 py-5 last:border-0 hover:bg-muted/30 focus-within:bg-muted/30">
+                  <input type="radio" name="primaryObjective" value={option.value} checked={data.primaryObjective === option.value} onChange={() => choose(option.value)} className="mt-1 h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
+                  <span><span className="block text-base font-semibold">{option.label}</span><span className="mt-1 block text-sm leading-6 text-muted-foreground">{option.description}</span></span>
+                </label>)}
+              </fieldset>
+              {errors.goals && <p role="alert" className="text-sm text-destructive">{errors.goals}</p>}
+              {data.primaryObjective === 'custom' && field('goals', 'Descreva seu objetivo', 'O que você precisa alcançar?', true)}
+              {field('successSignal', 'Como você vai reconhecer esse avanço? (opcional)', 'Ex.: mais pedidos de orçamento qualificados.', true)}
+              {select('conversionDestination', 'O que a pessoa deve fazer depois de conhecer seu perfil?', [
+                { value: 'Conversar pelo Direct', label: 'Conversar pelo Direct' },
+                { value: 'Chamar no WhatsApp', label: 'Chamar no WhatsApp' },
+                { value: 'Visitar o site ou loja online', label: 'Visitar o site ou loja online' },
+                { value: 'Pedir orçamento ou agendar atendimento', label: 'Pedir orçamento ou agendar atendimento' },
+                { value: 'Visitar o espaço físico', label: 'Visitar o espaço físico' },
+                { value: 'Seguir para conhecer melhor a marca', label: 'Seguir para conhecer melhor a marca' },
+                { value: 'Próximo passo ainda indefinido. Recomendar como hipótese.', label: 'Preciso de uma sugestão' }])}
+              <div className="flex flex-wrap gap-x-6 gap-y-3">
+                <Button variant="link" className="h-auto p-0" onClick={() => choose('undecided')}>Ainda não sei definir</Button>
+                <Button variant="link" className="h-auto p-0 text-muted-foreground" onClick={() => choose('custom')}>Tenho outro objetivo</Button>
+              </div>
+              {data.primaryObjective === 'undecided' && <p role="status" className="rounded-lg border border-border p-3 text-sm text-muted-foreground">Objetivo em aberto. A IA deverá propor hipóteses para você validar.</p>}
+            </>}
+            {step === 3 && <>
+              {select('weeklyTime', 'Quanto tempo consegue dedicar ao conteúdo por semana?', [
+                { value: 'Até 1 hora por semana', label: 'Até 1 hora' },
+                { value: 'De 1 a 3 horas por semana', label: 'De 1 a 3 horas' },
+                { value: 'De 3 a 5 horas por semana', label: 'De 3 a 5 horas' },
+                { value: 'Mais de 5 horas por semana', label: 'Mais de 5 horas' },
+                { value: 'Tempo disponível ainda não definido. Começar com um volume pequeno para validar.', label: 'Ainda não sei; começar com pouco' }])}
+              {select('desiredPostingFrequency', 'Qual frequência é viável para o feed?', postingFrequencyOptions.map((item) => item.value === 'personalizado' ? { ...item, label: 'Definir com a estratégia' } : item))}
+              {field('availableResources', 'Equipe e recursos disponíveis (opcional)', 'Apoio de design, equipamentos, materiais e outras condições da rotina.', true)}
+              {select('recordingComfort', 'Como se sente gravando vídeos? (opcional)', [
+                { value: 'À vontade para aparecer e falar', label: 'À vontade para aparecer e falar' },
+                { value: 'Prefiro gravar mãos, produtos ou bastidores', label: 'Prefiro produtos, mãos ou bastidores' },
+                { value: 'Posso narrar, mas prefiro não aparecer', label: 'Posso narrar, mas prefiro não aparecer' },
+                { value: 'Ainda preciso testar e ganhar confiança', label: 'Ainda preciso testar' }])}
+              {field('capacityToServe', 'Consegue atender mais pessoas hoje? (opcional)', 'Conte limites de agenda, produção, estoque ou atendimento.', true)}
+              {select('instagramProficiencyLevel', 'Seu nível de experiência no Instagram', proficiencyLevelOptions)}
+              <details className="rounded-xl border border-border p-4"><summary className="cursor-pointer text-sm font-medium">Foco do funil (opcional)</summary><div className="mt-4">{select('funnelFocus', 'Como distribuir os conteúdos?', funnelOptions)}</div></details>
+            </>}
+            {step === 4 && <>
+              <dl className="divide-y divide-border rounded-xl border border-border px-5">
+                {review.map(([label, value, index]) => <div key={label} className="flex items-start justify-between gap-4 py-5"><div className="min-w-0"><dt className="text-sm font-semibold">{label}</dt><dd className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{value}</dd></div><Button variant="link" size="sm" onClick={() => move(index)} aria-label={'Editar ' + label}>Editar</Button></div>)}
+              </dl>
+              <div className="rounded-xl border border-border p-5 text-sm leading-6">
+                {previewMode ? <p>Esta prévia não gera estratégias nem consulta seu saldo. Salve as respostas abaixo e abra o app real para entrar na sua conta, importar o briefing e conferir os créditos.</p> : planLoading ? 'Consultando seu plano...' : planError ? <p role="alert" className="text-destructive">{planError}</p> : <>
+                  <p className="font-semibold">{generationCost === 0 ? 'Salvar esta revisão do briefing é gratuito.' : `Gerar a estratégia completa consome ${generationCost} créditos.`}</p>
+                  {creditsRemaining !== undefined && <p className="text-muted-foreground">Saldo disponível: {creditsRemaining} créditos. {creditsRemaining >= generationCost && `Após gerar: ${creditsRemaining - generationCost} créditos.`}</p>}
+                  <p className="mt-2 text-muted-foreground">Revisar o briefing é gratuito. Novas gerações e refinamentos com IA têm o custo indicado em cada ação.</p>
+                  {!canGenerate && <p className="mt-2 text-muted-foreground">Seu saldo não permite uma nova estratégia. Você pode salvar o briefing e voltar depois.</p>}
+                </>}
+              </div>
+              {data.baseline && <div className="rounded-xl border border-border p-4 text-sm"><p className="font-semibold">Ponto de partida declarado</p><p className="mt-2 text-muted-foreground">Fonte: {data.baseline.sourceDescription}. Captura: {data.baseline.capturedAt}. {data.baseline.periodStart ? `Período: ${data.baseline.periodStart} a ${data.baseline.periodEnd}.` : 'Sem período de resultados informado.'}</p><Button variant="link" className="px-0" onClick={() => move(1)}>Revisar medição</Button></div>}
+              <div className="rounded-xl bg-muted/30 p-4 text-sm leading-6"><p className="font-semibold">O que ainda precisa ser validado</p><p className="mt-2 text-muted-foreground">{[!data.availableProof && 'Nenhuma prova ou credencial fornecida.', !data.baseline && 'Sem medição inicial do Instagram.', !data.serviceArea && 'Área de atendimento não informada.', !data.capacityToServe && 'Capacidade de atendimento não informada.'].filter(Boolean).join(' ') || 'As informações fornecidas orientam a estratégia. Recomendações continuam sendo hipóteses até serem testadas.'} A IA deverá sinalizar hipóteses e não inventar resultados.</p></div>
+            </>}
+            <div hidden={step !== 4}><AttachmentsPanel value={data.attachments} service={attachmentService}
+              onChange={(attachments) => setData((previous) => ({ ...previous, attachments }))} onPendingChange={setPendingAttachments} disabled={busy} /></div>
+          </div>
+        </div>
+        <aside className="border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-24"><h2 className="text-base font-semibold text-primary">{help[step][0]}</h2><p className="mt-5 max-w-sm text-sm leading-7 text-muted-foreground">{help[step][1]}</p></aside>
+      </div>
+      {(message || error) && <p role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4 text-sm">{message || error}</p>}
+      <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 sm:mt-14">
+        <Button variant="outline" onClick={() => move(step - 1)} disabled={step === 0 || busy}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button>
+        {step < 4 ? <Button variant="gradient" className="min-h-12 w-full rounded-xl px-8 sm:w-[420px]" onClick={() => move(step + 1)}>{step === 3 ? 'Revisar briefing' : 'Continuar para ' + ['situação', 'objetivo', 'recursos'][step]}<ArrowRight className="ml-3 h-4 w-4" /></Button>
+          : !canGenerate && !planError && !planLoading && onUpgrade ? <Button variant="gradient" onClick={onUpgrade}>Ver planos</Button>
+          : <Button variant="gradient" className="min-h-12 rounded-xl px-8" onClick={generate} disabled={!isAuthenticated || !canGenerate || planLoading || !!planError || busy || pendingAttachments}><Sparkles className="mr-2 h-4 w-4" />{busy ? 'Aguarde...' : submitLabel || (previewMode ? 'Salvar briefing para o app real' : `Gerar estratégia · ${generationCost} créditos`)}</Button>}
+      </footer>
+    </div>}
+  </section>;
+}

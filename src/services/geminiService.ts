@@ -28,7 +28,7 @@ export const generateIdealCustomerProfile = async (
   const primaryAudienceDesire = goals.split(',')[0]?.trim() || 'alcançar resultados tangíveis';
   const secondaryAudienceDesire = goals.split(',')[1]?.trim() || 'sentir-se capacitado';
 
-  let profileDescription = `**Perfil do Cliente Ideal para o Nicho de ${niche}**
+  const profileDescription = `**Perfil do Cliente Ideal para o Nicho de ${niche}**
 
 Este perfil foi construído para maximizar seus objetivos de "${goals}" e ressoar com seu público-alvo: "${audience}".
 
@@ -76,7 +76,7 @@ export const generateMonetizationIdeas = async (
   const funnelFocus = input.funnelFocus;
   const primaryProduct = productsAndServices.split(';')[0]?.trim() || 'um produto digital';
 
-  let ideas = `**Estratégias de Monetização para o Nicho de ${niche}**
+  const ideas = `**Estratégias de Monetização para o Nicho de ${niche}**
 
 Estas ideias são projetadas para alinhar-se com seus objetivos de "${goals}" e seu foco de funil em "${funnelFocus}".
 
@@ -127,7 +127,7 @@ export const generateInstagramBio = async (
   const specificResult = input.goals.split(',')[0]?.trim() || 'sucesso no Instagram';
   const qualityOfLife = input.audience.includes('bem-estar') ? 'mais equilibrada e feliz' : 'mais produtiva e realizada';
 
-  let bioOptions = `**Opções de Bio para Instagram - Tom ${brandVoice}**
+  const bioOptions = `**Opções de Bio para Instagram - Tom ${brandVoice}**
 
 Estas opções foram criadas para atrair "${audience}" e impulsionar "${goals}", com foco em "${funnelFocus}".
 

@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { PlanType, UserPlan } from '@/types/plans';
 import { PLANS, getPlanLimit } from '@/types/plans';
+import { incrementLegacyPlanUsage } from '@/lib/legacy-plan-usage';
+
+const PLAN_COLUMNS = 'user_id,plan_type,strategies_used,period_start,stripe_customer_id,stripe_subscription_id,updated_at,is_blocked';
 
 interface UsePlanReturn {
   planType: PlanType;
@@ -10,9 +13,10 @@ interface UsePlanReturn {
   strategiesUsed: number;
   strategiesLimit: number;
   strategiesRemaining: number;
+  extraCredits: number;
   canGenerate: boolean;
   isLoading: boolean;
-  // Alerta: 'none' | 'half' | 'last' | 'blocked'
+  error: string | null;
   alertLevel: 'none' | 'half' | 'last' | 'blocked';
   incrementUsage: () => Promise<void>;
   refreshPlan: () => Promise<void>;
@@ -20,61 +24,46 @@ interface UsePlanReturn {
 
 export function usePlan(userId: string | undefined): UsePlanReturn {
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
+  const [extraCredits, setExtraCredits] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   const fetchPlan = useCallback(async () => {
     if (!userId) {
+      setUserPlan(null);
+      setExtraCredits(0);
       setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
+    setLoadFailed(false);
     try {
       const { data, error } = await supabase
         .from('user_plans')
-        .select('*')
+        .select(PLAN_COLUMNS)
         .eq('user_id', userId)
         .single();
 
       if (error && error.code === 'PGRST116') {
-        // Registro não existe — cria o plano free para o usuário
-        const newPlan: Omit<UserPlan, 'updatedAt'> & { updated_at?: string } = {
-          userId,
-          planType: 'free',
-          strategiesUsed: 0,
-          periodStart: new Date().toISOString(),
-          stripeCustomerId: null,
-          stripeSubscriptionId: null,
-        };
-
-        const { data: created } = await supabase
+        const { error: createError } = await supabase
           .from('user_plans')
           .insert({
             user_id: userId,
-            plan_type: 'free',
-            strategies_used: 0,
-            period_start: new Date().toISOString(),
-            stripe_customer_id: null,
-            stripe_subscription_id: null,
-          })
-          .select()
+          });
+        if (createError) throw createError;
+        const { data: created, error: readError } = await supabase
+          .from('user_plans')
+          .select(PLAN_COLUMNS)
+          .eq('user_id', userId)
           .single();
 
-        if (created) {
-          setUserPlan(mapRow(created));
-        } else {
-          // Fallback local se o insert falhar (tabela pode não existir ainda)
-          setUserPlan({
-            userId,
-            planType: 'free',
-            strategiesUsed: getLocalUsage(userId),
-            periodStart: null,
-            stripeCustomerId: null,
-            stripeSubscriptionId: null,
-            updatedAt: new Date().toISOString(),
-          });
-        }
+        if (readError || !created) throw readError ?? new Error('Plano indisponivel');
+        setUserPlan(mapRow(created));
+        setIsBlocked(Boolean(created.is_blocked));
       } else if (data) {
-        // Verifica se precisa resetar o contador mensal (planos pagos)
+        setIsBlocked(Boolean(data.is_blocked));
         const plan = mapRow(data);
         if (plan.planType !== 'free' && plan.periodStart) {
           const periodStart = new Date(plan.periodStart);
@@ -84,28 +73,37 @@ export function usePlan(userId: string | undefined): UsePlanReturn {
             (now.getMonth() - periodStart.getMonth());
 
           if (monthsElapsed >= 1) {
-            // Resetar contador mensal
-            await supabase
+            const { error: resetError } = await supabase
               .from('user_plans')
               .update({ strategies_used: 0, period_start: now.toISOString() })
               .eq('user_id', userId);
+            if (resetError) throw resetError;
             plan.strategiesUsed = 0;
             plan.periodStart = now.toISOString();
           }
         }
         setUserPlan(plan);
+      } else {
+        throw error ?? new Error('Plano indisponivel');
       }
+
+      const { data: grants, error: grantsError } = await supabase
+        .from('credit_grants')
+        .select('amount, used_amount, expires_at')
+        .eq('user_id', userId);
+      if (grantsError) throw grantsError;
+
+      const now = Date.now();
+      const remainingCredits = (grants ?? []).reduce((sum, grant) => {
+        const expiresAt = grant.expires_at ? new Date(grant.expires_at as string).getTime() : null;
+        if (expiresAt && expiresAt < now) return sum;
+        return sum + Math.max(0, Number(grant.amount ?? 0) - Number(grant.used_amount ?? 0));
+      }, 0);
+      setExtraCredits(remainingCredits);
     } catch {
-      // Fallback: usa localStorage se Supabase indisponível
-      setUserPlan({
-        userId,
-        planType: 'free',
-        strategiesUsed: getLocalUsage(userId),
-        periodStart: null,
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        updatedAt: new Date().toISOString(),
-      });
+      setLoadFailed(true);
+      setExtraCredits(0);
+      setUserPlan(null);
     } finally {
       setIsLoading(false);
     }
@@ -116,36 +114,19 @@ export function usePlan(userId: string | undefined): UsePlanReturn {
   }, [fetchPlan]);
 
   const incrementUsage = useCallback(async () => {
-    if (!userId || !userPlan) return;
+    if (!userId || !userPlan || userPlan.userId !== userId) throw new Error('Plano indisponivel');
 
-    const newCount = userPlan.strategiesUsed + 1;
-
-    // Atualiza otimisticamente
+    const newCount = await incrementLegacyPlanUsage(supabase, userId, userPlan.strategiesUsed);
     setUserPlan(prev => prev ? { ...prev, strategiesUsed: newCount } : prev);
-
-    // Persiste no Supabase
-    try {
-      await supabase
-        .from('user_plans')
-        .update({ strategies_used: newCount })
-        .eq('user_id', userId);
-    } catch {
-      // Fallback: persiste em localStorage
-      saveLocalUsage(userId, newCount);
-    }
-
-    // Sempre mantém localStorage sincronizado como backup
-    saveLocalUsage(userId, newCount);
   }, [userId, userPlan]);
-
-  // ─── Derivações ─────────────────────────────────────────────────────────────
 
   const planType: PlanType = userPlan?.planType ?? 'free';
   const planConfig = PLANS[planType];
-  const limit = getPlanLimit(planType);
+  const baseLimit = getPlanLimit(planType);
+  const limit = baseLimit + extraCredits;
   const used = userPlan?.strategiesUsed ?? 0;
   const remaining = Math.max(0, limit - used);
-  const canGenerate = remaining > 0;
+  const canGenerate = !isLoading && !loadFailed && !isBlocked && userPlan?.userId === userId && remaining > 0;
 
   let alertLevel: 'none' | 'half' | 'last' | 'blocked' = 'none';
   if (!canGenerate) {
@@ -162,37 +143,16 @@ export function usePlan(userId: string | undefined): UsePlanReturn {
     strategiesUsed: used,
     strategiesLimit: limit,
     strategiesRemaining: remaining,
+    extraCredits,
     canGenerate,
     isLoading,
+    error: loadFailed ? 'Não foi possível consultar seu plano. Atualize a página ou contate o suporte.'
+      : isBlocked ? 'Sua conta está bloqueada. Contate o suporte.' : null,
     alertLevel,
     incrementUsage,
     refreshPlan: fetchPlan,
   };
 }
-
-// ─── Helpers localStorage (fallback) ─────────────────────────────────────────
-
-function getLocalKey(userId: string) {
-  return `si_usage_${userId}`;
-}
-
-function getLocalUsage(userId: string): number {
-  try {
-    return parseInt(localStorage.getItem(getLocalKey(userId)) ?? '0', 10);
-  } catch {
-    return 0;
-  }
-}
-
-function saveLocalUsage(userId: string, count: number) {
-  try {
-    localStorage.setItem(getLocalKey(userId), String(count));
-  } catch {
-    // ignore
-  }
-}
-
-// ─── Mapper Supabase row → UserPlan ──────────────────────────────────────────
 
 function mapRow(row: Record<string, unknown>): UserPlan {
   return {

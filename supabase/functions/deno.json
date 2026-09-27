@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "stripe": "npm:stripe@22.6.1",
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.84.0"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}

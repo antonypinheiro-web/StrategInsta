@@ -26,6 +26,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { InputDialog } from '@/components/InputDialog';
 import { usePlan } from '@/hooks/usePlan';
+import { trackUsageEvent } from '@/services/usageService';
+import { completeStrategySave } from '@/lib/complete-strategy-save';
+import { generateFinalStrategyAssets } from '@/lib/final-strategy-assets';
+import { AccountViewSwitch } from '@/components/AccountViewSwitch';
+import { saveBriefingDraft } from '@/lib/briefing';
+import { StrategyText } from '@/components/strategy/StrategyText';
+import { SavedStrategiesDialog } from '@/components/SavedStrategiesDialog';
+import type { SavedStrategy } from '@/lib/saved-strategy';
 import logo from "@/assets/logo.png";
 
 // Type Definitions
@@ -84,6 +92,7 @@ const ThemeSwitcher: React.FC<{ theme: Theme; setTheme: (theme: Theme) => void; 
 };
 
 const MarkdownRenderer: React.FC<{ content: string | StoriesStrategyItem[] }> = ({ content }) => {
+    if (typeof content === 'string') return <StrategyText content={content} />;
     if (Array.isArray(content)) {
         // Renderizar StoriesStrategyItem[]
         return (
@@ -105,61 +114,57 @@ const MarkdownRenderer: React.FC<{ content: string | StoriesStrategyItem[] }> = 
         );
     }
 
-    // Renderizar string Markdown
-    const renderLine = (line: string, index: number) => {
-        if (line.match(/^\*\*Opção \d+.*?\*\*$/)) return <h3 key={index} className="text-xl font-bold mt-8 mb-4">{line.replace(/\*\*/g, '')}</h3>;
-        if (line.match(/^\*\*\d[\d\.]*\s.*?\*\*$/)) return <h2 key={index} className="text-2xl font-bold mt-6 mb-3 pb-2 border-b border-border">{line.replace(/\*\*/g, '')}</h2>;
-        if (line.match(/^\*\*.+?\*\*$/)) return <h3 key={index} className="text-xl font-semibold mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>;
-        if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) return <li key={index} className="ml-5 list-disc text-foreground/80">{line.trim().substring(2)}</li>;
-        if (line.trim() === '---') return <hr key={index} className="my-6 border-border" />;
-        if (line.trim() === '') return null;
-        return <p key={index} className="text-foreground/80 mb-4 leading-relaxed">{line}</p>;
-    };
-    return <div className="prose prose-sm md:prose-base max-w-none">{content.split('\n').map(renderLine)}</div>;
+    return null;
 };
-
-const LOCAL_STORAGE_KEY = 'strateginsta_user_input';
 
 const Index: React.FC = () => {
   const { user, isLoading: isSessionLoading } = useSession();
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const plan = usePlan(user?.id);
+  const { refreshPlan } = plan;
   const [appPhase, setAppPhase] = useState<AppPhase>('onboarding');
   const [dashboardSection, setDashboardSection] = useState<string>('idealCustomerProfile');
   const [generationState, setGenerationState] = useState<GenerationState>('idle');
-  // Initialize userInput with data from localStorage if available
-  const [userInput, setUserInput] = useState<UserInput | null>(() => {
-    if (typeof window !== 'undefined') { // Ensure localStorage is available (client-side)
-      try {
-        const storedInput = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (storedInput) {
-          const parsedInput = JSON.parse(storedInput);
-          // Ensure files are not persisted, as they are not JSON serializable
-          return { ...parsedInput, files: undefined };
-        }
-      } catch (e) {
-        console.error("Failed to parse user input from localStorage", e);
-      }
-    }
-    return null;
-  });
+  // Draft restoration is account-scoped inside the briefing, not a shared browser key.
+  const [userInput, setUserInput] = useState<UserInput | null>(null);
   const [strategy, setStrategy] = useState<Partial<GeneratedStrategy>>({});
   const [error, setError] = useState<string | null>(null);
   const [refinementInput, setRefinementInput] = useState('');
   const [isFirstGeneration, setIsFirstGeneration] = useState(true);
   const [theme, setTheme] = useState<Theme>('system');
-  const [finalAssetsPromise, setFinalAssetsPromise] = useState<Promise<{
-    contentTable: ContentTableData;
-    editorialCalendar: CalendarDay[];
-    actionPlan: ActionPlanItem[];
-  }> | null>(null);
+  const finalizingRef = useRef(false);
+  const finalRunRef = useRef(0);
+  const [finalAssetsFailed, setFinalAssetsFailed] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState(false);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<HistoryItem | null>(null);
   const [showNameStrategyDialog, setShowNameStrategyDialog] = useState(false); // Novo estado para o diálogo
   const isCancelledRef = useRef(false);
+  const savedStrategyIdRef = useRef<string | null>(null);
+  const usageRecordedRef = useRef(false);
+  const [savedStrategyName, setSavedStrategyName] = useState<string | null>(null);
+
+  const openSavedStrategy = useCallback((saved: SavedStrategy) => {
+    isCancelledRef.current = true;
+    finalRunRef.current++;
+    savedStrategyIdRef.current = saved.id;
+    usageRecordedRef.current = true;
+    setSavedStrategyName(saved.name);
+    setUserInput(saved.input);
+    setStrategy(saved.strategy);
+    setHistory(saved.history);
+    setCompletedSteps(new Set(Object.keys(saved.strategy)));
+    setViewingHistoryItem(null);
+    setIsHistoryPanelOpen(false);
+    setShowNameStrategyDialog(false);
+    setGenerationState('idle');
+    setIsFirstGeneration(false);
+    setError(null);
+    setDashboardSection('idealCustomerProfile');
+    setAppPhase('dashboard');
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -168,13 +173,14 @@ const Index: React.FC = () => {
   }, [theme]);
 
   const handleLogout = useCallback(async () => {
+    isCancelledRef.current = true;
+    finalRunRef.current++;
     await supabase.auth.signOut();
     setUserInput(null);
     setStrategy({});
     setHistory([]);
     setCompletedSteps(new Set());
     setAppPhase('onboarding');
-    localStorage.removeItem(LOCAL_STORAGE_KEY); // Clear stored input on logout
     toast.success("Você foi desconectado com sucesso!");
   }, []);
 
@@ -193,7 +199,7 @@ const Index: React.FC = () => {
           case 'idealCustomerProfile':
               return generateIdealCustomerProfile(input, refinementPrompt);
           case 'monetizationIdeas':
-              return generateMonetizationIdeas(input, refinementPrompt);
+              return generateMonetizationIdeas(input, refinementPrompt, currentStrategy);
           case 'instagramBio':
               return generateInstagramBio(input, currentStrategy, refinementPrompt);
           case 'storiesStrategy':
@@ -211,6 +217,7 @@ const Index: React.FC = () => {
     }
     
     isCancelledRef.current = false;
+    setIsFirstGeneration(false);
     setGenerationState(refinementPrompt ? 'refining' : 'generating');
     setError(null);
     toast.info(refinementPrompt ? "Refinando sua estratégia..." : "Gerando sua estratégia...");
@@ -218,7 +225,7 @@ const Index: React.FC = () => {
     try {
       const result = await generateStrategyPart(appPhase as GenerationStep, userInput, strategy, refinementPrompt);
       if (isCancelledRef.current) return;
-      setStrategy(prev => ({ ...prev, [appPhase]: result }));
+      setStrategy(prev => ({ ...prev, contentTable: undefined, editorialCalendar: undefined, actionPlan: undefined, [appPhase]: result }));
       setGenerationState('reviewing');
       setIsFirstGeneration(false);
       toast.success("Seção gerada com sucesso!");
@@ -256,15 +263,23 @@ const Index: React.FC = () => {
   useEffect(() => {
     const checkout = searchParams.get('checkout');
     if (checkout === 'success') {
-      toast.success('Assinatura ativada! Bem-vindo ao plano premium 🎉');
+      toast.info('Checkout concluído. O plano será liberado após a confirmação do pagamento pelo servidor.');
+      void refreshPlan();
       setSearchParams({}, { replace: true });
     } else if (checkout === 'cancelled') {
       toast.info('Checkout cancelado. Você ainda pode assinar quando quiser.');
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, refreshPlan]);
 
   const handleStart = useCallback((input: UserInput) => {
+    if (plan.error || plan.isLoading) {
+      toast.error(plan.error ?? 'Aguarde a consulta do seu plano.');
+      return;
+    }
+    savedStrategyIdRef.current = null;
+    usageRecordedRef.current = false;
+    setSavedStrategyName(null);
     if (!user?.id) {
       setError('Erro interno: Usuário não autenticado ao iniciar a estratégia.');
       toast.error("Erro interno: Usuário não autenticado ao iniciar a estratégia.");
@@ -274,6 +289,7 @@ const Index: React.FC = () => {
     // ── Verificação de créditos ──────────────────────────────────────────────
     if (!plan.canGenerate) {
       setShowPlansModal(true);
+      trackUsageEvent('paywall_viewed', 'billing', { planType: plan.planType, reason: 'credit_limit' });
       toast.warning(
         plan.planType === 'free'
           ? 'Você usou todas as estratégias gratuitas. Faça upgrade para continuar!'
@@ -290,12 +306,11 @@ const Index: React.FC = () => {
           : '⚠️ Último crédito do mês!'
       );
     }
+    trackUsageEvent('onboarding_completed', 'onboarding', { planType: plan.planType, funnelFocus: input.funnelFocus });
     isCancelledRef.current = false;
     setUserInput(input);
-    // Save input to localStorage, excluding files as they are not JSON serializable
-    const inputToStore = { ...input, files: undefined };
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(inputToStore));
+      saveBriefingDraft(localStorage, user.id, input, 4);
     } catch (e) {
       console.error("Failed to save user input to localStorage", e);
     }
@@ -309,30 +324,17 @@ const Index: React.FC = () => {
     setAppPhase(generationOrder[0]); // <--- AQUI: Define a fase do aplicativo para a primeira etapa de geração
     // console.log("handleStart called. Current user:", user); // Removido o console.log de depuração
 
-    const promise = (async () => {
-        try {
-            const contentTable = await generateContentTable(input);
-            const tempStrategy: Partial<GeneratedStrategy> = { contentTable };
-            const editorialCalendar = await generateEditorialCalendar(input, tempStrategy);
-            tempStrategy.editorialCalendar = editorialCalendar;
-            const actionPlan = await generateActionPlan(input, tempStrategy);
-            return { contentTable, editorialCalendar, actionPlan };
-        } catch (err) {
-            console.error("Falha ao gerar os conteúdos finais em segundo plano:", err);
-            toast.error("Falha ao gerar os conteúdos finais em segundo plano.");
-            throw err;
-        }
-    })();
-    setFinalAssetsPromise(promise);
-  }, [user?.id]);
+    setFinalAssetsFailed(false);
+  }, [user?.id, plan]);
 
   const handleReset = useCallback(() => {
+    finalRunRef.current++;
     setAppPhase('onboarding');
     setUserInput(prev => prev ? { ...prev, files: undefined } : null);
     setStrategy({});
     setError(null);
     setGenerationState('idle');
-    setFinalAssetsPromise(null);
+    setFinalAssetsFailed(false);
     setCompletedSteps(new Set());
     setIsHistoryPanelOpen(false);
     setViewingHistoryItem(null);
@@ -342,6 +344,7 @@ const Index: React.FC = () => {
 
   const handleStopGeneration = useCallback(() => {
     isCancelledRef.current = true;
+    finalRunRef.current++;
     setError(null);
     toast.warning("Geração interrompida.");
 
@@ -356,28 +359,30 @@ const Index: React.FC = () => {
 
   const saveStrategyToSupabase = useCallback(async (strategyName: string) => {
     if (!user?.id || !userInput || !strategy) {
-      toast.error("Não foi possível salvar a estratégia: dados incompletos.");
-      return;
+      throw new Error('Dados incompletos para salvar a estratégia.');
     }
 
     try {
-      const { data, error } = await supabase
+      savedStrategyIdRef.current ??= crypto.randomUUID();
+      const { error } = await supabase
         .from('strategies')
-        .insert({
+        .upsert({
+          id: savedStrategyIdRef.current,
           user_id: user.id,
           name: strategyName,
           user_input: userInput,
           generated_strategy: strategy,
           history: history, // Salvar o histórico junto com a estratégia
-        })
-        .select();
+        }, { onConflict: 'id' })
+        .select('id').single();
 
       if (error) throw error;
       toast.success("Estratégia salva com sucesso!");
-      console.log("Estratégia salva:", data);
+      trackUsageEvent('strategy_saved', 'generation', { strategyName });
     } catch (error) {
       console.error("Erro ao salvar estratégia no Supabase:", error);
       toast.error("Erro ao salvar a estratégia.");
+      throw error;
     }
   }, [user?.id, userInput, strategy, history]);
 
@@ -392,12 +397,22 @@ const Index: React.FC = () => {
         setIsFirstGeneration(true);
         toast.info("Continuando para a próxima etapa...");
     } else {
+        if (!userInput || finalizingRef.current) return;
+        finalizingRef.current = true;
+        const finalRun = ++finalRunRef.current;
+        const cancelled = () => isCancelledRef.current || finalRun !== finalRunRef.current;
+        isCancelledRef.current = false;
+        setError(null);
+        setFinalAssetsFailed(false);
+        setIsFirstGeneration(false);
         setGenerationState('generating');
         toast.info("Finalizando a geração da estratégia completa...");
         try {
-            if (!finalAssetsPromise) throw new Error("Promise dos conteúdos finais não encontrada.");
-            const finalAssets = await finalAssetsPromise;
-            setStrategy(prev => ({ ...prev, ...finalAssets }));
+            await generateFinalStrategyAssets(userInput, strategy, {
+              contentTable: generateContentTable,
+              editorialCalendar: generateEditorialCalendar,
+              actionPlan: generateActionPlan,
+            }, setStrategy, cancelled);
             
             const allSteps = new Set<string>(generationOrder);
             ['contentTable', 'editorialCalendar', 'actionPlan'].forEach(step => allSteps.add(step));
@@ -406,31 +421,39 @@ const Index: React.FC = () => {
             toast.success("Estratégia completa gerada com sucesso!");
             setShowNameStrategyDialog(true); // Abrir o diálogo para nomear a estratégia
         } catch (err) {
-             setError('Falha ao gerar as etapas finais. Por favor, reinicie.');
-             toast.error("Falha ao gerar as etapas finais. Por favor, reinicie.");
+             if (!cancelled()) {
+               setFinalAssetsFailed(true);
+               setError('Não foi possível concluir as etapas finais. As etapas prontas foram mantidas nesta tela.');
+               toast.error('Falha nas etapas finais. Você pode tentar novamente.');
+             }
         } finally {
-            setGenerationState('idle');
+            finalizingRef.current = false;
+            if (!cancelled()) setGenerationState('idle');
         }
     }
-  }, [appPhase, finalAssetsPromise]);
+  }, [appPhase, userInput, strategy]);
   
   const handleNameStrategyConfirm = useCallback(async (name: string) => {
-    await saveStrategyToSupabase(name);
-    await plan.incrementUsage(); // Incrementa crédito apenas após salvar com sucesso
+    await completeStrategySave(() => saveStrategyToSupabase(name), async () => {
+      if (!usageRecordedRef.current) {
+        await plan.incrementUsage();
+        usageRecordedRef.current = true;
+      }
+    });
+    setSavedStrategyName(name);
     setAppPhase('dashboard');
   }, [saveStrategyToSupabase, plan]);
 
-  const handleNameStrategySkip = useCallback(() => {
-    saveStrategyToSupabase(`Estratégia ${new Date().toLocaleDateString()}`); // Salvar com nome padrão
-    setAppPhase('dashboard'); // Mover para o dashboard
-  }, [saveStrategyToSupabase]);
+  const handleNameStrategySkip = useCallback(async () => {
+    await handleNameStrategyConfirm(`Estratégia ${new Date().toLocaleDateString()}`);
+  }, [handleNameStrategyConfirm]);
 
-  const handleRegenerate = () => {
+  const handleRegenerate = useCallback(() => {
       executeGeneration();
       toast.info("Regerando a seção atual...");
-  };
+  }, [executeGeneration]);
 
-  const handleRefine = (e: React.FormEvent) => {
+  const handleRefine = useCallback((e: React.FormEvent) => {
       e.preventDefault();
       if(!refinementInput.trim()) {
         toast.warning("Por favor, digite um prompt de refinamento.");
@@ -438,7 +461,7 @@ const Index: React.FC = () => {
       }
       executeGeneration(refinementInput);
       setRefinementInput('');
-  };
+  }, [executeGeneration, refinementInput]);
 
   const handleViewHistoryItem = (item: HistoryItem) => {
     setViewingHistoryItem(item);
@@ -486,9 +509,10 @@ const Index: React.FC = () => {
               </Button>
             </div>
           ) : error ? (
-            <div className="status-danger-bg border p-4 rounded-md mb-6 flex items-center gap-2">
+            <div className="status-danger-bg border p-4 rounded-md mb-6 flex flex-wrap items-center gap-2">
               <XCircle className="w-5 h-5" />
               <span>{error}</span>
+              <Button variant="outline" onClick={finalAssetsFailed ? handleConfirmAndContinue : handleRegenerate}>Tentar novamente</Button>
             </div>
           ) : currentContent ? (
             <div className="space-y-6">
@@ -523,7 +547,7 @@ const Index: React.FC = () => {
         </CardContent>
       </Card>
     );
-  }, [appPhase, generationState, strategy, error, refinementInput, handleRefine, handleRegenerate, handleConfirmAndContinue, handleStopGeneration]);
+  }, [appPhase, generationState, strategy, error, refinementInput, handleRefine, handleRegenerate, handleConfirmAndContinue, handleStopGeneration, finalAssetsFailed]);
 
 
   if (isSessionLoading) {
@@ -541,18 +565,16 @@ const Index: React.FC = () => {
           <div className="relative left-[calc(50%-11rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-[var(--gradient-from)] to-[var(--gradient-to)] opacity-30 dark:opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
         </div>
         
-        <header className="py-8 text-center relative mb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {appPhase !== 'onboarding' && <header className="py-8 text-center relative mb-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="absolute top-8 right-8 flex items-center gap-4">
               {user && (
                 <button onClick={handleLogout} className="p-2 rounded-full transition-colors text-foreground/60 hover:text-foreground hover:bg-border" aria-label="Sair">
                     Sair
                 </button>
               )}
-              {appPhase !== 'onboarding' && (
                 <button onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} className="p-2 rounded-full transition-colors text-foreground/60 hover:text-foreground hover:bg-border" aria-label="Toggle history panel">
                     <History className="w-6 h-6" />
                 </button>
-              )}
               <ThemeSwitcher theme={theme} setTheme={setTheme} />
             </div>
             <div className="flex items-center justify-center gap-4">
@@ -566,16 +588,12 @@ const Index: React.FC = () => {
             <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               Sua Estrategista de Conteúdo Pessoal, Potencializada por IA
             </h2>
-             {appPhase === 'onboarding' && (
-              <p className="mt-6 text-lg leading-8 text-foreground/70 max-w-3xl mx-auto">
-                Transforme seu conhecimento em um ano de conteúdo magnético em minutos. Do perfil do seu cliente ideal ao plano de ação diário, nós criamos a estratégia para você focar em crescer.
-              </p>
-            )}
-        </header>
+        </header>}
 
-        <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
+        <main className={appPhase === 'onboarding' ? '' : 'mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8'}>
+          {appPhase !== 'onboarding' && <div className="mb-4"><AccountViewSwitch current="user" /></div>}
           {/* Barra de créditos — visível quando logado */}
-          {user && !plan.isLoading && (
+          {user && !plan.isLoading && appPhase !== 'onboarding' && (
             <div className="mb-6">
               <CreditsBar
                 planType={plan.planType}
@@ -589,7 +607,11 @@ const Index: React.FC = () => {
           )}
 
           {appPhase === 'onboarding' ? (
-              <OnboardingWizard onStart={handleStart} initialValues={userInput} error={error} isAuthenticated={!!user?.id} />
+              <OnboardingWizard key={user?.id} userId={user?.id} onStart={handleStart} initialValues={userInput} error={error}
+                isAuthenticated={!!user?.id} planLoading={plan.isLoading} planError={plan.error}
+                canGenerate={plan.canGenerate} creditsRemaining={plan.strategiesRemaining} onUpgrade={() => setShowPlansModal(true)}
+                onLogout={handleLogout}
+                toolbar={<><SavedStrategiesDialog key={user?.id} userId={user?.id} onOpen={openSavedStrategy} /><AccountViewSwitch current="user" compact /><ThemeSwitcher theme={theme} setTheme={setTheme} /></>} />
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-5 xl:grid-cols-6 gap-8 items-start">
               {/* Botão hamburger — mobile only */}
@@ -635,7 +657,8 @@ const Index: React.FC = () => {
                 />
               </aside>
 
-              <div className={`transition-all duration-300 ${isHistoryPanelOpen ? 'lg:col-span-3 xl:col-span-4' : 'lg:col-span-4 xl:col-span-5'}`}>
+              <div className={`min-w-0 transition-all duration-300 ${isHistoryPanelOpen ? 'lg:col-span-3 xl:col-span-4' : 'lg:col-span-4 xl:col-span-5'}`}>
+                {appPhase === 'dashboard' && <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><p className="break-words font-medium">{savedStrategyName}</p><SavedStrategiesDialog key={user?.id} userId={user?.id} onOpen={openSavedStrategy} /></div>}
                 {appPhase !== 'dashboard' ? renderGenerationStep() : (
                   <StrategyDashboard
                     strategy={strategy as GeneratedStrategy}
@@ -665,7 +688,7 @@ const Index: React.FC = () => {
           )}
         </main>
         
-        <footer className="text-center py-8 mt-12 border-t border-border bg-card/50">
+        {appPhase !== 'onboarding' && <footer className="text-center py-8 mt-12 border-t border-border bg-card/50">
           <div className="flex items-center justify-center gap-4">
               <div className="text-sm text-foreground/60">
                 <span>Desenvolvido com IA por </span>
@@ -675,7 +698,7 @@ const Index: React.FC = () => {
                 </a>
               </div>
             </div>
-        </footer>
+        </footer>}
         <div className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]" aria-hidden="true">
           <div className="relative left-[calc(50%+3rem)] aspect-[1155/678] w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-[var(--gradient-from)] to-[var(--gradient-to)] opacity-30 dark:opacity-20 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]" style={{clipPath: 'polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)'}}></div>
         </div>
@@ -691,13 +714,14 @@ const Index: React.FC = () => {
       <InputDialog
         isOpen={showNameStrategyDialog}
         onClose={() => setShowNameStrategyDialog(false)}
+        onCancel={handleNameStrategySkip}
         onConfirm={handleNameStrategyConfirm}
         title="Nomear sua Estratégia"
-        description="Dê um nome à sua nova estratégia para facilitar a organização no histórico."
+        description="Escolha um nome ou use a data de hoje. As duas opções salvam a estratégia na sua conta."
         label="Nome da Estratégia"
         placeholder="Ex: Estratégia de Lançamento do Curso X"
-        confirmText="Salvar e Ir para Dashboard"
-        cancelText="Pular e Ir para Dashboard"
+        confirmText="Salvar estratégia"
+        cancelText="Usar nome automático"
       />
     </div>
   );

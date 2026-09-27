@@ -4,6 +4,26 @@ export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';
 export type PostingFrequency = 'diariamente' | '3x_semana' | '2x_semana' | '1x_semana' | 'personalizado';
 
 export interface UserInput {
+  brandName?: string;
+  primaryObjective?: string;
+  successSignal?: string;
+  mainObstacle?: string;
+  businessStage?: string;
+  serviceArea?: string;
+  salesChannels?: string;
+  purchaseProcess?: string;
+  customerProblem?: string;
+  differentiators?: string;
+  availableProof?: string;
+  communicationRestrictions?: string;
+  conversionDestination?: string;
+  currentBio?: string;
+  weeklyTime?: string;
+  recordingComfort?: string;
+  capacityToServe?: string;
+  priceRange?: string;
+  baseline?: import('./types/briefing').ProfileBaseline;
+  attachments?: import('./types/briefing').ApprovedAttachment[];
   niche: string;
   audience: string;
   username: string;

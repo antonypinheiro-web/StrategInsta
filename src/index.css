@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+.briefing-workspace {
+  background-image: radial-gradient(ellipse 55% 170px at 60% 0, hsl(var(--primary) / 0.12), transparent),
+    radial-gradient(ellipse 35% 130px at 75% 0, hsl(var(--secondary) / 0.09), transparent);
+}
+
+.dark .briefing-workspace { color-scheme: dark; }
+
 /* StrategInsta Design System - Instagram-inspired AI tool */
 
 @layer base {

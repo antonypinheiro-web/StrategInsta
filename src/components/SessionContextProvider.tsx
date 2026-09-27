@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LoadingSpinner } from './LoadingSpinner';
+import { trackUsageEvent } from '@/services/usageService';
 
 interface SessionContextType {
   session: Session | null;
@@ -26,49 +27,42 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
   }, [location]);
 
   useEffect(() => {
-    let authListener: any = null;
-
-    const initializeAuth = async () => {
-      // 1. Buscar a sessão inicial
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      setUser(initialSession?.user || null);
-      setIsLoading(false); // O carregamento inicial está completo
-
-      // 2. Lidar com a navegação inicial com base na sessão
-      const currentPath = locationRef.current.pathname; // Usa a referência para o caminho atual
-      const isLoginPage = currentPath === '/login';
-
-      if (initialSession && isLoginPage) {
-        navigate('/app', { replace: true });
-      } else if (!initialSession && !isLoginPage) {
-        navigate('/login', { replace: true });
-      }
-
-      // 3. Configurar o listener para futuras mudanças no estado de autenticação
-      authListener = supabase.auth.onAuthStateChange((event, currentSession) => {
+    let disposed = false;
+    let previousUserId: string | null = null;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    // INITIAL_SESSION delivers the initial state through this same subscription.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+        if (disposed) return;
         setSession(currentSession);
         setUser(currentSession?.user || null);
+        setIsLoading(false);
+
+        if (event === 'SIGNED_IN' && currentSession?.user?.id && currentSession.user.id !== previousUserId) {
+          const timer = setTimeout(() => {
+            timers.delete(timer);
+            if (!disposed) void trackUsageEvent('login', 'auth', {
+              provider: currentSession.user.app_metadata?.provider ?? 'email',
+            }, currentSession.user.id);
+          }, 0);
+          timers.add(timer);
+        }
+        previousUserId = currentSession?.user.id ?? null;
 
         // Re-verificar o caminho atual no momento do evento usando a referência
-        const pathOnEvent = locationRef.current.pathname; 
-        const isLoginPageOnEvent = pathOnEvent === '/login'; 
+        const pathOnEvent = locationRef.current.pathname;
+        const isLoginPageOnEvent = pathOnEvent === '/login';
 
         if (currentSession && isLoginPageOnEvent) {
           navigate('/app', { replace: true });
         } else if (!currentSession && !isLoginPageOnEvent) {
           navigate('/login', { replace: true });
         }
-      });
-    };
-
-    initializeAuth();
+    });
 
     return () => {
-      // Limpar o listener quando o componente for desmontado
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+      disposed = true;
+      subscription.unsubscribe();
+      timers.forEach(clearTimeout);
     };
   }, [navigate]); // Removido location.pathname das dependências para evitar re-execuções desnecessárias
 

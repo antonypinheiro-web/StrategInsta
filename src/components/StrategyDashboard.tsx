@@ -17,7 +17,7 @@ interface StrategyDashboardProps {
   userInput: UserInput;
   activeSection: string;
   setActiveSection: (section: string) => void;
-  onRegenerate: (step: any, input: UserInput, strategy: any, refinement?: string) => Promise<any>;
+  onRegenerate: (step: keyof GeneratedStrategy, input: UserInput, strategy: Partial<GeneratedStrategy>, refinement?: string) => Promise<GeneratedStrategy[keyof GeneratedStrategy]>;
   setHistory: (history: HistoryItem[]) => void;
   viewingHistoryItem: HistoryItem | null;
 }
@@ -70,10 +70,7 @@ export const StrategyDashboard: React.FC<StrategyDashboardProps> = ({
 
   return (
     <div className="card-elevated p-6 sm:p-8 w-full animate-fade-in">
-      <h2 className="text-2xl font-bold text-foreground mb-4">{titleToDisplay}</h2>
-      <p className="text-foreground/70 mb-6">
-        {viewingHistoryItem ? `Visualizando item do histórico: ${viewingHistoryItem.title}` : `Conteúdo gerado para ${titleToDisplay}.`}
-      </p>
+      {viewingHistoryItem && <p className="text-foreground/70 mb-6">Revisão anterior: {titleToDisplay}</p>}
       <div className="mt-6 space-y-4">
         {renderContent()}
       </div>
