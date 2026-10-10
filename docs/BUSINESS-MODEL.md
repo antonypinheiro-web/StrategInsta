@@ -1,5 +1,15 @@
 # StrategInsta — Modelo de Negócio
 
+> Atualização do piloto, 27/09/2026: os cálculos e pacotes de março abaixo são
+> históricos. Não sustentam preço ou margem da nova operação. O piloto usa uma
+> carteira de IA: 30 créditos iniciais, estratégia completa 20, roteiro 2,
+> ideia/refino curto 1, dia de Stories 2 por bloco de 5, semana 10 por bloco de
+> 35 e plano de monetização 5. Cotas 120/240 continuam como cenários de oferta
+> para validar com consumo medido; não foram aplicadas a contratos ou Stripe.
+> O admin registra tokens/modelo e custo estimado em USD usando preços datados.
+> Referência de modelo não equivale a teste de acesso pela chave.
+> Fonte vigente: `PLANO-PILOTO-EMPREENDEDORES.md`, seções 15 a 17.
+
 **Versão:** 1.0 | **Data:** Março de 2026
 
 ---

@@ -1,73 +1,95 @@
-# Welcome to your Lovable project
+# StrategInsta
 
-## Project info
+Aplicacao de planejamento estrategico de Instagram. Primeiro piloto: empreendedores
+planejando para o proprio negocio.
+O projeto oficial fica em `F:\00.claude-code\projects\1.softwares--e--apps\strateg-insta`.
+Esta pasta `app/` contem o codigo e o repositorio Git. Leia `../HANDOFF.md` para
+retomar o trabalho sem confundir a versao local com a publicada.
 
-**URL**: https://lovable.dev/projects/da15f189-2703-4d7a-abe8-c8d0250dbe36
+Piloto aprovado e implementado localmente em 27/09/2026: onboarding/anexos,
+matriz, Stories, gerador, histórico, revisões, carteira e modelos no admin.
+100 testes, typecheck, Deno check e build passaram. A publicação ainda depende
+de autorização; detalhes em [lote do piloto](docs/PILOTO-PUBLICACAO.md).
 
-## How can I edit this code?
+## Tecnologias
 
-There are several ways of editing your application.
+React, TypeScript, Vite, Tailwind CSS e componentes shadcn/ui.
+Supabase para autenticacao, banco e Edge Functions. IA e Stripe passam pelo
+servidor. O frontend nao deve conter Service Role nem chaves privadas de IA/pagamento.
 
-**Use Lovable**
+## Desenvolvimento local
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/da15f189-2703-4d7a-abe8-c8d0250dbe36) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+Use Node.js com suporte a execucao nativa de TypeScript nos testes e npm.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm ci
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+O servidor local usa a porta 8080.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- `/app`: aplicativo real. Exige login e usa o backend configurado; pode consumir creditos.
+- `/admin`: painel administrativo. Exige conta autorizada pelo servidor.
+- `/tests/ui/briefing.html`: previa visual local. NAO gera estrategias nem consulta saldo real.
 
-**Use GitHub Codespaces**
+O frontend aponta para o projeto Supabase configurado em
+`src/integrations/supabase/client.ts`. Confira o destino antes de testes com dados
+reais. Nao copie chaves privadas para o codigo ou para arquivos versionados.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Respostas preenchidas na previa
 
-## What technologies are used for this project?
+Na ultima etapa, use **Salvar briefing para o app real** e depois **Abrir app real**.
+Entre na sua conta no mesmo navegador e no mesmo endereco local. Use
+**Trazer respostas da previa**, confirme a importacao e revise antes de gerar.
 
-This project is built with:
+A importacao so aparece em desenvolvimento e exige confirmacao. Nao gera
+estrategia automaticamente nem altera permissoes. O rascunho da conta nao e
+sobrescrito em disco pela importacao: use **Salvar e sair** depois de revisar.
+Rascunhos ficam neste navegador; nao sincronizam com outro dispositivo ou com
+o dominio publicado. Evite dados sensiveis. Fixtures nao entram no build final.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Estrategias salvas
 
-## How can I deploy this project?
+No briefing ou dashboard, abra **Estrategias salvas** para consultar resultados da
+sua conta. Essa leitura nao gera IA nem usa creditos. O resultado completo e seu
+historico sao recuperados do Supabase; rascunhos de briefing continuam locais.
 
-Simply open [Lovable](https://lovable.dev/projects/da15f189-2703-4d7a-abe8-c8d0250dbe36) and click on Share -> Publish.
+## Verificacoes
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
 
-Yes, you can!
+Os testes locais nao substituem validacao autenticada, teste de pagamentos nem
+revisao de seguranca em producao. Pendencias e limites estao no HANDOFF e nas stories.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Identidade e favicon
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+`public/favicon.svg` e a fonte do icone SI com o gradiente original.
+`public/favicon.png` e `public/favicon.ico` sao versoes rasterizadas do mesmo icone.
+Todos os HTMLs declaram explicitamente o favicon com uma versao de cache.
+
+## Publicacao e backend
+
+A hospedagem atual e Vercel. `npm run build` gera os artefatos em `dist/`;
+publicar exige conferir o projeto, o ambiente e a autorizacao para producao.
+Nao enviar `.env`, documentos internos ou credenciais no deployment.
+
+As Edge Functions e migrations ficam em `supabase/`. O historico remoto de
+migrations precisa ser reconciliado antes de um `db push`; nao reaplique o schema
+base. Instrucoes administrativas: `docs/ADMIN-CONSOLE-DEPLOY.md`.
+
+## Documentacao
+
+- `docs/PRD.md`: escopo do produto.
+- `docs/PLANO-PILOTO-EMPREENDEDORES.md`: requisitos, modelos, anexos, Stories e aceite do piloto.
+- `docs/ARCHITECTURE.md`: arquitetura.
+- `docs/stories/`: implementacoes, criterios e pendencias.
+- `design-qa.md`: verificacao visual local do briefing.
+- `../HANDOFF.md`: estado atual, riscos e proximos passos.
+
+O historico Git e os registros de origem do projeto sao preservados. Nao sao
+instrucoes vigentes de operacao ou publicacao.
