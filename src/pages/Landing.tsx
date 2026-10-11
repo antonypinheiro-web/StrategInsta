@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight, Star } from "lucide-react";
+import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { PLANS, PLAN_ORDER } from "@/types/plans";
 import logo from "@/assets/logo.png";
 
@@ -56,30 +56,6 @@ const PERSONAS = [
     title: "Agência de Marketing",
     description: "Escale sua produção sem escalar sua equipe. Estratégias ilimitadas para todos os seus clientes.",
     cta: "Plano Agency a partir de R$247/mês",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Carla Mendes",
-    role: "Confeiteira artesanal",
-    avatar: "CM",
-    text: "Eu gastava horas pensando no que postar e mesmo assim não tinha resultados. Com o ThinkPost, recebi um calendário completo de 30 dias em 3 minutos. Meu engajamento aumentou 40% no primeiro mês.",
-    stars: 5,
-  },
-  {
-    name: "Rafael Torres",
-    role: "Social Media Manager",
-    avatar: "RT",
-    text: "Gerencio 8 clientes e o ThinkPost virou essencial. O que antes levava um dia inteiro de trabalho agora faço em 20 minutos. A qualidade das estratégias é impressionante — os clientes adoram.",
-    stars: 5,
-  },
-  {
-    name: "Ana Lucia Ferreira",
-    role: "Coach de Carreira",
-    avatar: "AL",
-    text: "O diferencial é a personalização. Não é conteúdo genérico — é uma estratégia que entende o meu nicho, meu tom de voz e meus objetivos. Parece que foi feito por um estrategista humano.",
-    stars: 5,
   },
 ];
 
@@ -333,37 +309,6 @@ export default function Landing() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Depoimentos ────────────────────────────────────────────────────── */}
-      <section className="py-20 px-6 bg-muted/40">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">O que dizem nossos usuários</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-4">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: t.stars }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-foreground/70 leading-relaxed flex-1">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-foreground/50">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
