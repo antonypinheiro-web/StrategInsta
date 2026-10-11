@@ -1,9 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateCheckoutRedirect } from '../_shared/checkout-policy.ts';
 
 const STRIPE_SECRET_KEY = Deno.env.get('STRIPE_SECRET_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ALLOWED_ORIGINS = (Deno.env.get('APP_ALLOWED_ORIGINS') ?? 'https://strateginsta.vercel.app')
+  .split(',').map((origin) => origin.trim()).filter(Boolean);
 
 const PRICE_IDS: Record<string, Record<string, string>> = {
   individual: {
@@ -29,6 +32,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  if (req.method !== 'POST') return new Response('Metodo nao permitido', { status: 405, headers: corsHeaders });
 
   try {
     // Autenticar usuário
@@ -42,16 +46,23 @@ serve(async (req) => {
     if (authError || !user) throw new Error('Usuário inválido');
 
     const { planType, interval, successUrl, cancelUrl } = await req.json();
+    const safeSuccessUrl = validateCheckoutRedirect(successUrl, ALLOWED_ORIGINS);
+    const safeCancelUrl = validateCheckoutRedirect(cancelUrl, ALLOWED_ORIGINS);
+    if (new URL(safeSuccessUrl).origin !== new URL(safeCancelUrl).origin) {
+      throw new Error('Origens de retorno diferentes');
+    }
 
     const priceId = PRICE_IDS[planType]?.[interval];
     if (!priceId) throw new Error(`Preço não encontrado: ${planType}/${interval}`);
 
     // Verificar se já tem customer_id no Stripe
-    const { data: userPlan } = await supabase
+    const { data: userPlan, error: planError } = await supabase
       .from('user_plans')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id, is_blocked')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+    if (planError) throw planError;
+    if (userPlan?.is_blocked) throw new Error('Conta bloqueada');
 
     // Criar ou reutilizar customer no Stripe
     let customerId = userPlan?.stripe_customer_id;
@@ -61,6 +72,7 @@ serve(async (req) => {
         headers: {
           Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Idempotency-Key': `customer-${user.id}`,
         },
         body: new URLSearchParams({
           email: user.email!,
@@ -68,15 +80,15 @@ serve(async (req) => {
         }),
       });
       const customer = await customerRes.json();
-      if (customer.error) throw new Error(customer.error.message);
+      if (!customerRes.ok || customer.error || !customer.id) throw new Error('Falha ao criar cliente de pagamento');
       customerId = customer.id;
 
       // Salvar customer_id
-      await supabase.from('user_plans').upsert({
+      const { error: saveError } = await supabase.from('user_plans').upsert({
         user_id: user.id,
         stripe_customer_id: customerId,
-        plan_type: 'free',
-      });
+      }, { onConflict: 'user_id' });
+      if (saveError) throw saveError;
     }
 
     // Criar Checkout Session
@@ -91,8 +103,8 @@ serve(async (req) => {
         mode: 'subscription',
         'line_items[0][price]': priceId,
         'line_items[0][quantity]': '1',
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        success_url: safeSuccessUrl,
+        cancel_url: safeCancelUrl,
         'metadata[supabase_user_id]': user.id,
         'metadata[plan_type]': planType,
         'subscription_data[metadata][supabase_user_id]': user.id,
@@ -100,13 +112,14 @@ serve(async (req) => {
       }),
     });
     const session = await sessionRes.json();
-    if (session.error) throw new Error(session.error.message);
+    if (!sessionRes.ok || session.error || !session.url) throw new Error('Falha ao criar checkout');
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error('[create-checkout-session]', err instanceof Error ? err.message : 'Operation failed');
+    return new Response(JSON.stringify({ error: 'Nao foi possivel iniciar o pagamento. Tente novamente ou contate o suporte.' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

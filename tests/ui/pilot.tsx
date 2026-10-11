@@ -1,0 +1,61 @@
+import { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { PilotWorkspace } from '../../src/components/workspace/PilotWorkspace';
+import { applyWorkspaceResult, addDays, storiesCredits } from '../../src/components/workspace/workspace-model';
+import { awarenessLevels, contentPurposes } from '../../src/types/workspace';
+import type { PilotWorkspaceData, StoryFrame, StoriesDay, ContentFeedback, WorkspaceOperation, WorkspaceGenerationPayload, WorkspaceGenerationResult, ContentIdea, GeneratedContent } from '../../src/types/workspace';
+import type { UserInput, GeneratedStrategy } from '../../src/types';
+import { Button } from '../../src/components/ui/button';
+import '../../src/index.css';
+
+// Isolated visual fixture. All interactions remain in React state. No API,
+// browser storage, database, payment, real user data or model invocation.
+const input: UserInput = { brandName: 'Ateliê Exemplo', niche: 'Cerâmica artesanal, negócio fictício', audience: 'Pessoas que procuram presentes feitos à mão', username: 'atelie.exemplo', goals: 'Conversas sobre encomendas', funnelFocus: 'balanced', brandVoice: 'Direto e acolhedor', productsAndServices: 'Canecas feitas à mão sob encomenda', existingContentInsights: 'Nenhum resultado real informado', competitorsAndInspirations: '', contentPillars: 'Processo e escolha do presente', desiredPostingFrequency: '3x_semana', availableResources: 'Uma pessoa, duas horas por semana', instagramProficiencyLevel: 'iniciante' };
+const strategy: Partial<GeneratedStrategy> = { idealCustomerProfile: '## Base da análise\nNegócio fictício de canecas artesanais por encomenda.\n\n## Recorte para testar\nPessoas procurando um presente pessoal e que aceitam o prazo de produção. Esta é uma hipótese a validar.\n\n## Objeções para investigar\n- Como escolher a cor?\n- Quanto tempo leva a produção?\n\n## Próxima conversa\nPergunte o que torna um presente especial para cada comprador. Não há dados de renda ou resultados de vendas nesta prévia.', editorialCalendar: [{ day: 1, weekday: 'Segunda-feira', contentType: 'Reel', topic: 'Da argila à primeira forma', caption: 'Um registro fictício do processo artesanal.', hashtags: ['ceramica'] }], actionPlan: [{ week: 1, tasks: [{ task: 'Revisar oferta prioritária', description: 'Conferir prazo e opções que o negócio consegue entregar.', priority: 'high' }] }] };
+function frame(id: string, position: number): StoryFrame { return { id, position, goal: position === 1 ? 'retain' : 'engage', narrative: position === 1 ? 'Abra o dia mostrando uma etapa do processo.' : 'Convide a audiência a escolher o detalhe seguinte.', scene: 'Filme as mãos moldando uma caneca de exemplo.', speech: 'Hoje vou mostrar como nasce uma peça feita à mão.', onScreen: 'Do começo ao detalhe', tool: position === 1 ? 'Vídeo com legenda' : 'Enquete: alça redonda ou reta?', cta: 'Responda à enquete.', feedConnection: 'Aprofunda o processo mostrado no Reel do feed.', versionId: `version-${id}` }; }
+function idea(id: string, title: string): ContentIdea { return { id, title, angle: 'Mostre um detalhe real do processo e faça uma pergunta simples.', format: 'reel', briefingBasis: 'O briefing fictício informa cerâmica artesanal e disponibilidade de duas horas semanais.', proofNeeded: 'Mostrar apenas peças produzidas pelo próprio negócio.', cta: 'Qual detalhe você escolheria?', versionId: `version-${id}` }; }
+function initialData(): PilotWorkspaceData {
+  return { schemaVersion: 1, selectedMonetizationIds: ['offer-1'], scripts: [],
+    matrix: { id: 'matrix-fixture', cells: awarenessLevels.flatMap((level, levelIndex) => contentPurposes.map((purpose, purposeIndex) => { const id = `${level.id}:${purpose.id}`; return { id, awareness: level.id, purpose: purpose.id, ideas: [idea(`${id}:1`, `${levelIndex + 1}.${purposeIndex + 1} · Uma caneca com história`)] }; })) },
+    monetization: { id: 'monetization-fixture', potential: 'A oferta por encomenda permite testar presentes com significado. A demanda e a capacidade ainda precisam ser validadas.', basis: ['Produto artesanal informado no briefing fictício.', 'Produção por uma pessoa e tempo limitado.'], ideas: ['Caneca personalizada', 'Kit para presentear', 'Oficina introdutória'].map((title, index) => ({ id: `offer-${index + 1}`, title, offer: `${title} em lote pequeno para validar interesse.`, audience: 'Pessoas descritas no briefing de demonstração.', basis: 'Aproveita a habilidade artesanal informada.', resources: 'Tempo e materiais a confirmar antes da venda.', risks: 'Capacidade e procura ainda não foram medidas.', hypothesis: 'Verificar interesse com conversas antes de ampliar a oferta.' })) },
+    bios: [{ id: 'bio-1', name: 'Ateliê Exemplo | Cerâmica', text: 'Canecas feitas à mão para presentes com significado.\nEscolha seu detalhe. Fale comigo para encomendar.', recommendation: 'Oferta e próximo passo diretos.', versionId: 'version-bio-1' }, { id: 'bio-2', name: 'Ateliê Exemplo', text: 'Um presente começa no cuidado.\nCerâmica artesanal por encomenda.\nVamos escolher sua caneca?', recommendation: 'Convite leve para iniciar uma conversa.', versionId: 'version-bio-2' }, { id: 'bio-3', name: 'Cerâmica | Ateliê Exemplo', text: 'Da argila ao presente.\nCanecas artesanais, feitas uma a uma.\nConheça as opções por mensagem.', recommendation: 'Valoriza o processo de produção.', versionId: 'version-bio-3' }],
+    storiesWeek: { id: 'week-fixture', weekStart: '2026-09-28', days: Array.from({ length: 7 }, (_, index) => { const count = index === 6 ? 0 : index === 0 ? 2 : 1; return { id: `day-${index}`, date: addDays('2026-09-28', index), routine: index === 6 ? '' : 'Preparar a argila e trabalhar em uma caneca de demonstração.', requestedCount: count, offerOrEvent: 'Caneca sob encomenda', restrictions: 'Sem filmar clientes', stories: Array.from({ length: count }, (_, storyIndex) => frame(`story-${index}-${storyIndex}`, storyIndex + 1)) }; }) },
+  };
+}
+function simulatedCost(operation: WorkspaceOperation, payload: WorkspaceGenerationPayload) { return operation === 'stories_day' ? storiesCredits([payload.day!], 'day') : operation === 'stories_week' ? storiesCredits(payload.week!.days, 'week') : operation === 'monetization_plan' ? 5 : operation === 'content_script' ? 2 : ['matrix_generate', 'monetization_analyze', 'bio_generate', 'section_regenerate'].includes(operation) ? 5 : 1; }
+
+export function PilotFixture() {
+  const [data, setData] = useState(initialData);
+  const [balance, setBalance] = useState(120);
+  const [readOnly, setReadOnly] = useState(false);
+  const [dark, setDark] = useState(new URLSearchParams(window.location.search).get('theme') !== 'light');
+  const [notice, setNotice] = useState('Dados fictícios carregados. Nenhum conteúdo real foi alterado.');
+  const [feedback, setFeedback] = useState<ContentFeedback[]>([]);
+  const sequence = useRef(0);
+  useEffect(() => { document.documentElement.classList.toggle('dark', dark); }, [dark]);
+  const generate = async (operation: WorkspaceOperation, payload: WorkspaceGenerationPayload): Promise<WorkspaceGenerationResult> => {
+    const cost = simulatedCost(operation, payload);
+    if (cost > balance) throw new Error('Saldo fictício insuficiente. Seu rascunho continua aqui.');
+    const suffix = ++sequence.current;
+    const versionId = `fixture-revision-${suffix}`;
+    let output: unknown;
+    if (operation === 'content_script') {
+      output = { id: `script-${suffix}`, origin: payload.origin!, title: `Roteiro de demonstração ${suffix}`, format: payload.format ?? 'reel', objective: 'Mostrar o processo e iniciar uma conversa.', cta: 'Qual detalhe você escolheria?', blocks: [{ id: `block-${suffix}-1`, label: 'Abertura', action: 'Enquadre as mãos trabalhando a argila.', speech: 'Toda peça começa assim.', onScreen: 'Um presente feito com calma', text: payload.format === 'carousel' ? 'Do barro ao presente: veja como começa.' : undefined }, { id: `block-${suffix}-2`, label: 'Desenvolvimento e convite', action: 'Mostre a alça e as duas opções.', speech: 'Que detalhe combina com quem você quer presentear?', onScreen: 'Qual seria sua escolha?' }], caption: 'Texto sintético para testar edição, comparação e cópia.', note: 'Saída simulada da fixture.' } satisfies GeneratedContent;
+    } else if (operation === 'idea_generate' || operation === 'format_variation') output = { ...idea(`idea-${suffix}`, `Alternativa sintética ${suffix}`), format: payload.format ?? 'carousel' };
+    else if (operation === 'item_refine') output = payload.origin?.kind === 'bio' ? { ...payload.item, text: 'Cerâmica feita à mão, uma peça de cada vez.\nVamos escolher seu próximo presente?' } : payload.origin?.kind === 'story' ? { ...payload.item, speech: `Fala simulada revisada ${suffix}: hoje mostro um novo detalhe.`, narrative: 'Continue a conversa sobre o cuidado de cada peça.' } : { ...payload.item, title: `Ideia ajustada ${suffix}`, angle: payload.instruction || 'Abordagem revisada na demonstração.' };
+    else if (operation === 'stories_day') { const day = payload.day!; output = { ...day, stories: Array.from({ length: day.requestedCount }, (_, index) => frame(`generated-day-${suffix}-${index}`, index + 1)) } satisfies StoriesDay; }
+    else if (operation === 'stories_week') output = { ...payload.week, continuationSummary: payload.week?.previousWeekId ? 'Demonstração de continuidade baseada na semana anterior, sem presumir publicação.' : undefined, days: payload.week!.days.map((day, dayIndex) => ({ ...day, stories: Array.from({ length: day.requestedCount }, (_, index) => frame(`generated-week-${suffix}-${dayIndex}-${index}`, index + 1)) })) };
+    else if (operation === 'monetization_plan') output = '## Proposta e validação\nDefina um lote pequeno das ideias selecionadas e converse com clientes antes de ampliar.\n\n## Entrega e operação\nConfirme materiais, capacidade e prazo real.\n\n## Próximo passo\nRegistre o interesse observado e revise o que foi aprendido.';
+    else if (operation === 'monetization_analyze') output = initialData().monetization;
+    else if (operation === 'bio_generate') output = initialData().bios;
+    else if (operation === 'matrix_generate') output = initialData().matrix;
+    else output = `${strategy.idealCustomerProfile}\n\n## Revisão sintética\n${payload.instruction || 'Instrução de demonstração.'}`;
+    const result = { output, versionId };
+    setData(current => applyWorkspaceResult(current, operation, payload, result));
+    setBalance(current => current - cost);
+    setNotice(`Simulação: ${operation} · ${cost} créditos fictícios. Nenhuma chamada de IA.`);
+    return result;
+  };
+  return <div className="min-h-screen bg-background text-foreground"><div className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm"><strong>PRÉVIA SINTÉTICA.</strong> Sem conta, rede, IA, armazenamento ou consumo real. Recarregar apaga as interações desta página.</div><main className="mx-auto max-w-screen-2xl space-y-5 px-4 py-6 sm:px-8"><div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-lg font-semibold">Piloto visual do StrategInsta</h1><div className="flex flex-wrap items-center gap-3"><label className="text-sm"><input type="checkbox" checked={readOnly} onChange={event => setReadOnly(event.target.checked)} /> Histórico somente leitura</label><Button size="sm" variant="outline" onClick={() => setDark(current => !current)}>Alternar tema</Button></div></div><p role="status" className="rounded-lg border p-3 text-sm">{notice}</p><PilotWorkspace data={data} strategy={strategy} userInput={input} savedStrategyId="fixture-strategy" balance={balance} readOnly={readOnly} onGenerate={generate} onSaveVersion={async change => { setData(change.data); setNotice(`Revisão simulada salva: ${change.title}. 0 créditos fictícios.`); }} onFeedback={async value => { setFeedback(current => [...current.filter(item => item.versionId !== value.versionId), value]); setNotice(`Avaliação simulada registrada na versão ${value.versionId}: ${value.rating}.`); }} /><p className="text-xs text-muted-foreground">Avaliações registradas nesta prévia: {feedback.length}</p></main></div>;
+}
+if (import.meta.env.DEV) { const root = createRoot(document.getElementById('root')!); root.render(<PilotFixture />); import.meta.hot?.dispose(() => root.unmount()); }

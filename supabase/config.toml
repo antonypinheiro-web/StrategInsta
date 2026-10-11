@@ -1,0 +1,18 @@
+project_id = "strateginsta"
+
+[functions.stripe-webhook]
+import_map = "./functions/deno.json"
+# Stripe authenticates with its signed raw body, not a Supabase user JWT.
+verify_jwt = false
+
+[functions.admin-api]
+import_map = "./functions/deno.json"
+verify_jwt = true
+
+[functions.call-ai]
+import_map = "./functions/deno.json"
+verify_jwt = true
+
+[functions.create-checkout-session]
+import_map = "./functions/deno.json"
+verify_jwt = true

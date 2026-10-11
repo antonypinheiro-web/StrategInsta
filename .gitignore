@@ -1,3 +1,6 @@
+# Claude Code local settings
+.claude/
+
 # Logs
 logs
 *.log
@@ -27,3 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local release recovery evidence; preserve locally, never publish with the app
+/work/pilot-release-2026-09-27/
+
+# Supabase CLI local cache
+supabase/.temp/

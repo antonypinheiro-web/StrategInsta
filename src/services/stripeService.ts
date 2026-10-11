@@ -9,6 +9,13 @@ export async function createCheckoutSession(
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Usuário não autenticado');
 
+  await supabase.from('usage_events').insert({
+    user_id: session.user.id,
+    event_name: 'checkout_started',
+    event_type: 'billing',
+    metadata: { planType, interval },
+  });
+
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: {
       planType,
