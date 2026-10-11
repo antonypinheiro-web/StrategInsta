@@ -27,6 +27,8 @@ export function SavedStrategiesDialog({ userId, onOpen }: Props) {
       try {
         const { data, error: queryError } = await supabase.from('strategies')
           .select('id,name,updated_at').eq('user_id', userId)
+          // Strategies archived by the admin stay in the database but leave the user's list.
+          .or('generated_strategy->>archived.is.null,generated_strategy->>archived.neq.true')
           .order('updated_at', { ascending: false }).limit(limit + 1);
         if (queryError) throw queryError;
         if (active) { setRows((data ?? []).slice(0, limit)); setHasMore((data ?? []).length > limit); }

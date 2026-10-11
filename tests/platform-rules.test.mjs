@@ -31,3 +31,18 @@ test('monetization plan no longer promotes third-party consulting', () => {
   assert.doesNotMatch(system, /Antony/);
   assert.match(system, /Não promova serviços de terceiros/);
 });
+
+test('every operation sends the word JSON in the user input (OpenAI JSON mode requirement)', () => {
+  const cases = [
+    ['full_strategy', { stage: 'idealCustomerProfile' }],
+    ['full_strategy', { stage: 'final' }],
+    ['idea', { cell: { awareness: 'problem', purpose: 'growth' } }],
+    ['monetization_plan', { selectedMonetizationIds: ['a'] }],
+    ['script', { format: 'reel', origin: { id: 'x', kind: 'idea' } }],
+  ];
+  for (const [operation, params] of cases) {
+    const { user } = buildPilotPrompt(operation, params, { niche: 'Organização' }, {}, []);
+    assert.match(user, /JSON/, operation);
+    assert.doesNotThrow(() => JSON.parse(user.slice(user.indexOf('\n') + 1)), operation);
+  }
+});
