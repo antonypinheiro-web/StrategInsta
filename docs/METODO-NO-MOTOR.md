@@ -1,7 +1,7 @@
 # Método no motor de geração
 
 Versão 1.1 (proposta) • 11/10/2026 • Autor: Claude Code, para aprovação de Antony
-Status: **aguardando aprovação**. Só a camada de regras da plataforma está implementada
+Status: **aprovado por Antony em 11/10/2026** (decisões na seção 10). Só a camada de regras da plataforma está implementada
 (`call-ai` v11, publicada em 11/10/2026).
 
 Correção da v1.0: a versão anterior trazia estruturas da Mentoria de Instagram para o app.
@@ -98,7 +98,7 @@ Regras:
 ## 7. Demais saídas do app
 
 Mantêm o formato atual, com dois acréscimos do método:
-- **ICP**: inclui a fase E.A.E. e o gargalo 3A3R com justificativa.
+- **ICP**: o motor usa a fase E.A.E. e o gargalo 3A3R internamente para orientar o texto, sem exibir os nomes.
 - **Calendário e plano de ação**: priorizam a etapa do gargalo e respeitam a fase (em
   Estruturação, menos volume e mais base).
 - **Monetização**: ideias ligadas às etapas Receita e Recomendação, sem promoção de
@@ -109,7 +109,7 @@ Mantêm o formato atual, com dois acréscimos do método:
 | Área | Mudança | Impacto |
 | --- | --- | --- |
 | Backend | `knowledge/metodo.ts`; fase e gargalo na etapa ICP; matriz 5×5 com campo de etapa 3A3R | muda o contrato: subir com o frontend |
-| Frontend | matriz com a coluna "Oferta e venda"; fase e gargalo exibidos | deploy na Vercel |
+| Frontend | matriz com a coluna "Oferta e venda" (fase e gargalo ficam internos) | deploy na Vercel |
 | Briefing | campo "tem resposta automática no Direct? o que entrega?" (necessário para a regra de convite por palavra-chave) | frontend e backend juntos |
 | Custo e tempo | matriz +25% de saída; medir o limite de ~150 s da função | separar a matriz em etapa própria se necessário |
 | Compatibilidade | estratégias salvas com 5×4 continuam abrindo | testes de regressão |
@@ -119,13 +119,14 @@ Mantêm o formato atual, com dois acréscimos do método:
 Gerar com os mesmos 2 briefings no motor v11 (antes) e no lote 2 (depois); avaliação cega por
 Antony ("isto segue o meu método?"); medir custo, tokens e tempo nos dois modelos.
 
-## 10. Decisões pendentes de Antony
+## 10. Decisões de Antony (11/10/2026)
 
-1. Aprovar o conteúdo das seções 4 a 7.
-2. Mostrar a fase E.A.E. e o gargalo ao usuário, ou usar só internamente?
-3. Algum item do anexo A entra no app?
-4. O banco de estratégias 3A3R (`empresa/banco-3a3r/`) entra no motor como repertório, ou
-   fica só na consultoria?
+1. Seções 4 a 7: **aprovadas**.
+2. Fase E.A.E. e gargalo 3A3R: **uso apenas interno**. O motor usa para decidir, mas não
+   exibe ao usuário. Consequência: a linha "fase e gargalo exibidos" da seção 8 sai do
+   escopo do frontend; o ICP não mostra os nomes das fases.
+3. Anexo A (Mentoria): **nada entra no app**.
+4. Banco de estratégias 3A3R: **não entra no motor**; fica apenas na consultoria.
 
 ## Anexo A: elementos da Mentoria que NÃO entram por padrão
 
