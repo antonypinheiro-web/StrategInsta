@@ -26,7 +26,7 @@ export default function Login() {
         <div className="flex flex-col items-center text-center mb-6 space-y-2">
           <img
             src={logo}
-            alt="StrategInsta Logo"
+            alt="ThinkPost Logo"
             className="h-16 w-auto logo-theme-aware"
           />
           <p className="text-lg font-semibold text-foreground">Bem-vindo</p>

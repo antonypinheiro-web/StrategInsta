@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url));
-test('app and preview documents declare the versioned StrategInsta favicon', () => {
+test('app and preview documents declare the versioned ThinkPost favicon', () => {
   for (const path of ['index.html', 'tests/ui/briefing.html', 'tests/ui/briefing-responsive.html', 'tests/ui/briefing-comparison.html']) {
     const html = read(path).toString();
     assert.match(html, /lang="pt-BR"/);
@@ -11,7 +11,7 @@ test('app and preview documents declare the versioned StrategInsta favicon', () 
     assert.match(html, /href="\/favicon\.ico\?v=2"/);
   }
 });
-test('ICO fallback embeds the same PNG as the StrategInsta raster asset', () => {
+test('ICO fallback embeds the same PNG as the ThinkPost raster asset', () => {
   const ico = read('public/favicon.ico');
   const png = read('public/favicon.png');
   assert.equal(ico.readUInt16LE(2), 1);

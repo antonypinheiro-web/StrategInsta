@@ -1,4 +1,4 @@
-// StrategInsta — Tipos de Planos e Assinaturas
+// ThinkPost — Tipos de Planos e Assinaturas
 
 export type PlanType = 'free' | 'individual' | 'professional' | 'agency';
 
@@ -35,7 +35,7 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   free: {
     id: 'free',
     name: 'Grátis',
-    description: 'Experimente o StrategInsta sem compromisso',
+    description: 'Experimente o ThinkPost sem compromisso',
     price: 0,
     yearlyPrice: 0,
     strategiesPerMonth: 2, // total vitalício para free

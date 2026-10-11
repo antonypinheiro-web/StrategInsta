@@ -1,6 +1,6 @@
-# AI Rules for StrategInsta Development
+# AI Rules for ThinkPost Development
 
-This document outlines the core technologies and best practices for developing the StrategInsta application. Adhering to these rules ensures consistency, maintainability, and optimal performance.
+This document outlines the core technologies and best practices for developing the ThinkPost application. Adhering to these rules ensures consistency, maintainability, and optimal performance.
 
 ## Tech Stack Overview
 

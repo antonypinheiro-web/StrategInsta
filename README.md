@@ -1,4 +1,4 @@
-# StrategInsta
+# ThinkPost
 
 Aplicacao de planejamento estrategico de Instagram. Primeiro piloto: empreendedores
 planejando para o proprio negocio.

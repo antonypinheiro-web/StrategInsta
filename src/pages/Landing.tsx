@@ -41,7 +41,7 @@ const PERSONAS = [
   {
     emoji: "👤",
     title: "Empreendedor",
-    description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O StrategInsta faz isso por você em minutos.",
+    description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O ThinkPost faz isso por você em minutos.",
     cta: "Plano Individual a partir de R$47/mês",
   },
   {
@@ -64,14 +64,14 @@ const TESTIMONIALS = [
     name: "Carla Mendes",
     role: "Confeiteira artesanal",
     avatar: "CM",
-    text: "Eu gastava horas pensando no que postar e mesmo assim não tinha resultados. Com o StrategInsta, recebi um calendário completo de 30 dias em 3 minutos. Meu engajamento aumentou 40% no primeiro mês.",
+    text: "Eu gastava horas pensando no que postar e mesmo assim não tinha resultados. Com o ThinkPost, recebi um calendário completo de 30 dias em 3 minutos. Meu engajamento aumentou 40% no primeiro mês.",
     stars: 5,
   },
   {
     name: "Rafael Torres",
     role: "Social Media Manager",
     avatar: "RT",
-    text: "Gerencio 8 clientes e o StrategInsta virou essencial. O que antes levava um dia inteiro de trabalho agora faço em 20 minutos. A qualidade das estratégias é impressionante — os clientes adoram.",
+    text: "Gerencio 8 clientes e o ThinkPost virou essencial. O que antes levava um dia inteiro de trabalho agora faço em 20 minutos. A qualidade das estratégias é impressionante — os clientes adoram.",
     stars: 5,
   },
   {
@@ -125,7 +125,7 @@ export default function Landing() {
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <img src={logo} alt="StrategInsta" className="h-8 w-auto logo-theme-aware" />
+          <img src={logo} alt="ThinkPost" className="h-8 w-auto logo-theme-aware" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={goToApp}>Entrar</Button>
             <Button size="sm" variant="gradient" onClick={goToApp}>
@@ -155,7 +155,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-foreground/60 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Para de perder horas tentando planejar o que postar. A IA do StrategInsta analisa
+            Para de perder horas tentando planejar o que postar. A IA do ThinkPost analisa
             o seu negócio e entrega um plano de conteúdo completo, personalizado e pronto para executar.
           </p>
 
@@ -241,7 +241,7 @@ export default function Landing() {
       <section className="py-20 px-6 bg-muted/40">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para quem é o StrategInsta?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para quem é o ThinkPost?</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -420,14 +420,14 @@ export default function Landing() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-border py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="StrategInsta" className="h-7 w-auto logo-theme-aware" />
+          <img src={logo} alt="ThinkPost" className="h-7 w-auto logo-theme-aware" />
           <p className="text-sm text-foreground/40 text-center">
             Desenvolvido por{" "}
             <a href="https://www.instagram.com/antonypinheiro.eu" target="_blank" rel="noopener noreferrer"
               className="text-primary hover:underline">
               Antony Pinheiro
             </a>{" "}
-            · © {new Date().getFullYear()} StrategInsta
+            · © {new Date().getFullYear()} ThinkPost
           </p>
           <div className="flex gap-4 text-sm text-foreground/40">
             <button onClick={goToApp} className="hover:text-foreground transition-colors">Entrar</button>

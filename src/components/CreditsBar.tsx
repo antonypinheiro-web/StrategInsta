@@ -1,4 +1,4 @@
-// StrategInsta — Barra de Créditos
+// ThinkPost — Barra de Créditos
 import React from 'react';
 import { Sparkles, AlertTriangle, XCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';

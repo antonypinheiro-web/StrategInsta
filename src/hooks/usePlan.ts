@@ -1,4 +1,4 @@
-// StrategInsta — Hook de Plano e Créditos
+// ThinkPost — Hook de Plano e Créditos
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { PlanType, UserPlan } from '@/types/plans';

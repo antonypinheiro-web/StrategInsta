@@ -1,4 +1,4 @@
-// StrategInsta — Modal de Planos e Upgrade
+// ThinkPost — Modal de Planos e Upgrade
 import React, { useState } from 'react';
 import { Check, Zap, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

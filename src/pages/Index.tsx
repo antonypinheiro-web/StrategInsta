@@ -581,7 +581,7 @@ const Index: React.FC = () => {
               {/* Substituindo o h1 pelo img da logo */}
               <img
                 src={logo}
-                alt="StrategInsta Logo"
+                alt="ThinkPost Logo"
                 className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto logo-theme-aware"
               />
             </div>

@@ -155,7 +155,7 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
   return <section className="briefing-workspace min-h-screen bg-background text-foreground">
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-12">
-        <div className="flex items-center gap-5"><img src={logo} alt="StrategInsta" className="logo-theme-aware h-8 w-auto sm:h-9" />
+        <div className="flex items-center gap-5"><img src={logo} alt="ThinkPost" className="logo-theme-aware h-8 w-auto sm:h-9" />
           <span className="hidden border-l border-border pl-5 text-sm text-muted-foreground sm:inline">Briefing do negócio</span></div>
         <div className="flex flex-wrap items-center gap-2">{toolbar}{onLogout && <Button variant="ghost" onClick={requestLogout} disabled={busy}>Sair</Button>}{!paused && <Button variant="ghost" onClick={saveAndExit} disabled={!isAuthenticated || busy}><Save className="mr-2 h-4 w-4" />Salvar e sair</Button>}</div>
       </div>
