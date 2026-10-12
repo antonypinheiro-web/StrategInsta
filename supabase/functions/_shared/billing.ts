@@ -1,4 +1,6 @@
 import Stripe from 'stripe';
+import { buildPackGrant } from './credit-packs.ts';
+import type { PackGrant } from './credit-packs.ts';
 
 export interface BillingEvent {
   event_id: string;
@@ -19,6 +21,8 @@ export interface BillingDependencies {
   findCustomerUser: (customerId: string) => Promise<string | null>;
   planFromPrice: (priceId: string) => string;
   applyEvent: (event: BillingEvent) => Promise<unknown>;
+  /** Credits a paid credit-pack checkout; idempotent by reference. */
+  grantPack?: (grant: PackGrant) => Promise<unknown>;
   onError?: (error: unknown) => void;
 }
 
@@ -103,6 +107,11 @@ export function createWebhookHandler(deps: BillingDependencies) {
       return new Response('Assinatura ou payload invalido', { status: 400 });
     }
     try {
+      const grant = buildPackGrant(event as unknown as { id: string; type: string; data: { object: unknown } });
+      if (grant) {
+        if (!deps.grantPack) throw new Error('Compra de creditos sem processador configurado');
+        return Response.json({ received: true, result: await deps.grantPack(grant) });
+      }
       const change = await buildBillingEvent(event, deps);
       const result = change ? await deps.applyEvent(change) : 'ignored';
       return Response.json({ received: true, result });

@@ -35,7 +35,7 @@ interface Props {
 type TextFieldKey = Exclude<keyof BriefingData, 'baseline' | 'attachments'>;
 const steps = ['Negócio', 'Situação', 'Objetivo', 'Recursos', 'Revisão'];
 const titles = ['Vamos conhecer seu negócio.', 'Onde o negócio está hoje?', 'Qual é a prioridade deste ciclo?', 'O que é possível colocar em prática?', 'Revise antes de gerar.'];
-const subtitles = ['Comece pelo negócio. O restante da estratégia parte daqui.', 'Conte o que você sabe. As lacunas também ajudam a orientar a estratégia.', 'Escolha um objetivo principal para orientar a estratégia.', 'Um plano útil precisa caber na rotina de quem vai executar.', 'Confira as respostas e os limites do seu plano antes de continuar.'];
+const subtitles = ['Comece pelo negócio. O restante da estratégia parte daqui.', 'Conte o que você sabe. As lacunas também ajudam a orientar a estratégia.', 'Escolha um objetivo principal para orientar a estratégia.', 'Um plano útil precisa caber na rotina de quem vai executar.', 'Confira as respostas e o seu saldo de créditos antes de continuar.'];
 const help = [
   ['O negócio vem primeiro', 'O que a marca oferece e para quem ela existe orientam as próximas decisões. O perfil do Instagram é opcional.'],
   ['Contexto, não adivinhação', 'Resultados observados são diferentes de expectativas. Se ainda não houver dados, sinalize isso em vez de estimar.'],
@@ -275,7 +275,7 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
                 {review.map(([label, value, index]) => <div key={label} className="flex items-start justify-between gap-4 py-5"><div className="min-w-0"><dt className="text-sm font-semibold">{label}</dt><dd className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{value}</dd></div><Button variant="link" size="sm" onClick={() => move(index)} aria-label={'Editar ' + label}>Editar</Button></div>)}
               </dl>
               <div className="rounded-xl border border-border p-5 text-sm leading-6">
-                {previewMode ? <p>Esta prévia não gera estratégias nem consulta seu saldo. Salve as respostas abaixo e abra o app real para entrar na sua conta, importar o briefing e conferir os créditos.</p> : planLoading ? 'Consultando seu plano...' : planError ? <p role="alert" className="text-destructive">{planError}</p> : <>
+                {previewMode ? <p>Esta prévia não gera estratégias nem consulta seu saldo. Salve as respostas abaixo e abra o app real para entrar na sua conta, importar o briefing e conferir os créditos.</p> : planLoading ? 'Consultando seu saldo...' : planError ? <p role="alert" className="text-destructive">{planError}</p> : <>
                   <p className="font-semibold">{generationCost === 0 ? 'Salvar esta revisão do briefing é gratuito.' : `Gerar a estratégia completa consome ${generationCost} créditos.`}</p>
                   {creditsRemaining !== undefined && <p className="text-muted-foreground">Saldo disponível: {creditsRemaining} créditos. {creditsRemaining >= generationCost && `Após gerar: ${creditsRemaining - generationCost} créditos.`}</p>}
                   <p className="mt-2 text-muted-foreground">Revisar o briefing é gratuito. Novas gerações e refinamentos com IA têm o custo indicado em cada ação.</p>
@@ -295,7 +295,7 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
       <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 sm:mt-14">
         <Button variant="outline" onClick={() => move(step - 1)} disabled={step === 0 || busy}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button>
         {step < 4 ? <Button variant="gradient" className="min-h-12 w-full rounded-xl px-8 sm:w-[420px]" onClick={() => move(step + 1)}>{step === 3 ? 'Revisar briefing' : 'Continuar para ' + ['situação', 'objetivo', 'recursos'][step]}<ArrowRight className="ml-3 h-4 w-4" /></Button>
-          : !canGenerate && !planError && !planLoading && onUpgrade ? <Button variant="gradient" onClick={onUpgrade}>Ver planos</Button>
+          : !canGenerate && !planError && !planLoading && onUpgrade ? <Button variant="gradient" onClick={onUpgrade}>Comprar créditos</Button>
           : <Button variant="gradient" className="min-h-12 rounded-xl px-8" onClick={generate} disabled={!isAuthenticated || !canGenerate || planLoading || !!planError || busy || pendingAttachments}><Sparkles className="mr-2 h-4 w-4" />{busy ? 'Aguarde...' : submitLabel || (previewMode ? 'Salvar briefing para o app real' : `Gerar estratégia · ${generationCost} créditos`)}</Button>}
       </footer>
     </div>}

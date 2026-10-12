@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { History, Plus, RefreshCw } from 'lucide-react';
+import { History, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -9,6 +9,7 @@ import { PilotHistoryDialog } from '@/components/PilotHistoryDialog';
 import { AccountViewSwitch } from '@/components/AccountViewSwitch';
 import { SavedStrategiesDialog } from '@/components/SavedStrategiesDialog';
 import { InputDialog } from '@/components/InputDialog';
+import { CreditPacksDialog, CreditWalletSummary } from '@/components/CreditWallet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,7 +41,7 @@ export default function PilotIndex() {
   const [input, setInput] = useState<UserInput | null>(null);
   const [strategy, setStrategy] = useState<Partial<GeneratedStrategy>>({});
   const [workspace, setWorkspace] = useState<PilotWorkspaceData>(emptyWorkspace);
-  const [wallet, setWallet] = useState<Wallet>(); const [walletLoading, setWalletLoading] = useState(true);
+  const [wallet, setWallet] = useState<Wallet>(); const [packsOpen, setPacksOpen] = useState(false); const [walletLoading, setWalletLoading] = useState(true);
   const [error, setError] = useState(''); const [walletError, setWalletError] = useState('');
   const [busy, setBusy] = useState(false); const lock = useRef(false);
   const [historyOpen, setHistoryOpen] = useState(false); const [nameOpen, setNameOpen] = useState(false);
@@ -63,6 +64,16 @@ export default function PilotIndex() {
     ? createBriefingAttachmentService(businessId, user.id, () => briefingRef.current ?? input, () => { void refreshWallet(); }) : undefined,
     [user?.id, businessId, input, refreshWallet]);
   useEffect(() => { if (user?.id) { setBusinessId(businessIdForAccount(user.id)); void refreshWallet(); } }, [user?.id, refreshWallet]);
+  // Return from Stripe Checkout: the webhook credits the wallet; refresh and clear the flag from the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('compra');
+    if (!status) return;
+    if (status === 'ok') { toast.success('Pagamento recebido. Seus créditos aparecem em instantes.'); void refreshWallet(); window.setTimeout(() => void refreshWallet(), 5000); }
+    else toast.info('Compra cancelada. Nenhum valor foi cobrado.');
+    params.delete('compra');
+    window.history.replaceState(null, '', window.location.pathname + (params.size ? `?${params}` : ''));
+  }, [refreshWallet]);
   useEffect(() => {
     if (!busy) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
@@ -219,15 +230,16 @@ export default function PilotIndex() {
   const totalStories = workspace.storiesAgenda?.days.reduce((total, day) => total + day.requestedCount, 0) ?? 0;
   if (sessionLoading) return <LoadingSpinner message="Verificando sessão..." />;
   return <div className="min-h-screen bg-background text-foreground">
+    <CreditPacksDialog open={packsOpen} onOpenChange={setPacksOpen} />
     {phase !== 'onboarding' && <header className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8"><img src={logo} alt="StrategInsta" className="h-11 w-auto logo-theme-aware" /><div className="flex flex-wrap items-center gap-2">{toolbar}<Button variant="ghost" disabled={busy} onClick={() => void supabase.auth.signOut()}>Sair</Button></div></header>}
     {phase === 'onboarding' ? <OnboardingWizard key={String(user?.id) + editingInput} userId={user?.id} isAuthenticated={!!user} onStart={start}
       initialValues={input} error={error} toolbar={toolbar} onLogout={() => supabase.auth.signOut().then(() => {})} planLoading={editingInput ? false : walletLoading} planError={editingInput ? null : walletError}
       canGenerate={editingInput || !!wallet && wallet.available >= 20} creditsRemaining={wallet?.available} generationCost={editingInput ? 0 : 20}
       submitLabel={editingInput ? 'Salvar revisão do briefing' : undefined} attachmentService={attachmentService}
       onInputChange={value => { briefingRef.current = value; }}
-      onUpgrade={() => toast.info('As ofertas do piloto estão em revisão. Consulte o administrador para ajustar sua cota.')} />
+      onUpgrade={() => setPacksOpen(true)} />
     : <main className="mx-auto max-w-screen-2xl space-y-6 px-4 pb-12 sm:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4"><div><h1 className="text-xl font-semibold">{strategyName || input?.brandName || 'Sua estratégia'}</h1><p className="text-sm text-muted-foreground">{wallet ? wallet.available + ' créditos disponíveis · ' + wallet.reserved + ' reservados' : 'Consultando saldo'}{walletError && ' · ' + walletError}</p></div><div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={() => void refreshWallet()} aria-label="Atualizar saldo"><RefreshCw className="h-4 w-4" /></Button>{phase === 'dashboard' && <><Button variant="outline" disabled={busy || viewingVersion} onClick={() => { setEditingInput(true); setPhase('onboarding'); }}>Editar briefing · 0 créditos</Button><Button disabled={busy || viewingVersion} onClick={() => setNameOpen(true)}>Salvar estratégia</Button></>}<Button variant="outline" disabled={busy || !!job && phase !== 'dashboard'} onClick={() => { setPhase('onboarding'); setEditingInput(false); setJob(undefined); setViewingVersion(false); setError(''); }}><Plus className="mr-1 h-4 w-4" />Nova estratégia</Button></div></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4"><div><h1 className="text-xl font-semibold">{strategyName || input?.brandName || 'Sua estratégia'}</h1><div className="mt-1"><CreditWalletSummary wallet={wallet} error={walletError || undefined} busy={busy} onBuy={() => setPacksOpen(true)} onRefresh={() => void refreshWallet()} /></div></div><div className="flex flex-wrap gap-2">{phase === 'dashboard' && <><Button variant="outline" disabled={busy || viewingVersion} onClick={() => { setEditingInput(true); setPhase('onboarding'); }}>Editar briefing · 0 créditos</Button><Button disabled={busy || viewingVersion} onClick={() => setNameOpen(true)}>Salvar estratégia</Button></>}<Button variant="outline" disabled={busy || !!job && phase !== 'dashboard'} onClick={() => { setPhase('onboarding'); setEditingInput(false); setJob(undefined); setViewingVersion(false); setError(''); }}><Plus className="mr-1 h-4 w-4" />Nova estratégia</Button></div></div>
       {viewingVersion && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 p-4"><p>Você está consultando uma versão do histórico.</p><Button onClick={() => { setReviewSection(undefined); setViewingVersion(false); setStrategyId(undefined); setStrategyName('Cópia revisada'); }}>Usar como base para ajustes</Button></div>}
       {error && <div role="alert" className="space-y-3 rounded-xl border border-destructive/40 p-4"><p>{error}</p>{job && !busy && <div className="flex gap-2"><Button onClick={async () => { try { await runStage(job); } catch (e) { setError(message(e)); } }}>Retomar etapa</Button>{job.generationId && <Button variant="outline" onClick={async () => { try { const result = await pilotService.cancel(job.generationId!); setWallet(result.wallet); setJob(undefined); setPhase('dashboard'); setError('Reserva encerrada. As versões prontas continuam no histórico.'); } catch (e) { setError(message(e)); } }}>Encerrar reserva</Button>}</div>}</div>}
       {busy && <div className="rounded-xl border p-10"><LoadingSpinner message="Preparando sua estratégia. As etapas concluídas ficam no histórico." /></div>}{initialAgenda && workspace.storiesAgenda ? <section className="space-y-5 rounded-xl border p-5"><h2 className="text-xl font-semibold">Como será sua semana?</h2><p className="text-sm text-muted-foreground">A primeira semana inclui até 35 Stories no custo da estratégia. Conte a rotina real e escolha de 0 a 15 por dia.</p>{workspace.storiesAgenda.days.map(day => <div key={day.id} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[130px_1fr_110px]"><label className="text-sm">{new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}</label><Textarea aria-label={'Rotina ' + day.date} maxLength={3000} value={day.routine} placeholder="Compromissos, bastidores, oferta ou evento. Pode deixar em branco." onChange={e => setWorkspace(prev => ({ ...prev, storiesAgenda: { ...prev.storiesAgenda!, days: prev.storiesAgenda!.days.map(d => d.id === day.id ? { ...d, routine: e.target.value } : d) } }))} /><label className="text-sm">Quantidade<Input type="number" min={0} max={15} value={day.requestedCount} onChange={e => setWorkspace(prev => ({ ...prev, storiesAgenda: { ...prev.storiesAgenda!, days: prev.storiesAgenda!.days.map(d => d.id === day.id ? { ...d, requestedCount: Math.max(0, Math.min(15, Number(e.target.value))) } : d) } }))} /></label></div>)}<p>{totalStories}/35 Stories incluídos</p><Button disabled={totalStories > 35} onClick={() => void continueGeneration()}>Gerar semana incluída</Button></section>

@@ -16,3 +16,7 @@ verify_jwt = true
 [functions.create-checkout-session]
 import_map = "./functions/deno.json"
 verify_jwt = true
+
+[functions.create-credit-checkout]
+import_map = "./functions/deno.json"
+verify_jwt = true
