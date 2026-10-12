@@ -93,10 +93,17 @@ export function validateBriefing(raw:unknown):JsonObject {
 export function invalidOutput(reason:string):PilotError { const e=new PilotError('INVALID_OUTPUT',502); (e as PilotError&{reason?:string}).reason=reason; return e; }
 const FORMAT_ALIASES:Record<string,string>={reels:'reel',video:'reel',carrossel:'carousel',carrosel:'carousel',post:'static',estatico:'static','estático':'static',imagem:'static',image:'static',story:'stories'};
 const enumText=(value:unknown)=>typeof value==='string'?value.trim().toLowerCase():value;
+// Models describe formats ("Reel curto", "Carrossel educativo"); map by keyword when the enum is not exact.
+export function normalizeFormat(value:unknown):unknown {
+  const format=enumText(value);if(typeof format!=='string')return value;
+  if(formats.includes(format))return format;if(FORMAT_ALIASES[format])return FORMAT_ALIASES[format];
+  if(/reel|v[ií]deo/.test(format))return 'reel';if(/carros|carousel/.test(format))return 'carousel';
+  if(/stor/.test(format))return 'stories';if(/post|est[aá]tic|static|imagem|image|foto/.test(format))return 'static';
+  return value;
+}
 function normalizeIdea(raw:unknown):unknown {
   if(!raw||typeof raw!=='object'||Array.isArray(raw))return raw;
-  const v={...(raw as JsonObject)};const format=enumText(v.format);
-  v.format=typeof format==='string'?(FORMAT_ALIASES[format]??format):format;return v;
+  const v={...(raw as JsonObject)};v.format=normalizeFormat(v.format);return v;
 }
 function idea(raw:unknown,path='idea'):JsonObject {
   const v=fields(normalizeIdea(raw),['id','title','angle','briefingBasis'],1800);
@@ -137,24 +144,66 @@ function matrix(raw:unknown):JsonObject {
   });
   return v;
 }
-function frame(raw:unknown):JsonObject {
-  const v=fields(raw,['id','narrative','scene','tool'],1600);string(v.speech,1600);string(v.onScreen,1000);oneOf(v.goal,['retain','engage','convert']);
+const GOAL_ALIASES:Record<string,string>={reter:'retain',retencao:'retain','retenção':'retain',engajar:'engage',engajamento:'engage',converter:'convert',conversao:'convert','conversão':'convert'};
+const asText=(value:unknown)=>typeof value==='string'?value:value===null||value===undefined?'':typeof value==='number'?String(value):value;
+const asInt=(value:unknown)=>typeof value==='string'&&/^\d+$/.test(value.trim())?Number(value.trim()):value;
+const clip=(value:unknown,max:number)=>typeof value==='string'&&value.length>max?value.slice(0,max):value;
+// Stories frames often come with an empty tool, null on-screen text or goals in Portuguese; fix those before validating.
+function normalizeFrame(raw:unknown,index:number,dayId:string):unknown {
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return raw;
+  const v={...(raw as JsonObject)};
+  for(const key of ['narrative','scene','speech','onScreen','tool','cta','feedConnection','effort'])v[key]=asText(v[key]);
+  if(typeof v.tool==='string'&&!v.tool.trim())v.tool='nenhum';
+  for(const [key,max] of [['narrative',1600],['scene',1600],['tool',1600],['speech',1600],['onScreen',1000]] as const)v[key]=clip(v[key],max);
+  const goal=enumText(v.goal);v.goal=typeof goal==='string'?(GOAL_ALIASES[goal]??goal):goal;
+  v.position=index+1;
+  if(typeof v.id!=='string'||!v.id.trim())v.id=`${dayId}-s${index+1}`;
+  return v;
+}
+export function normalizeStoryDay(raw:unknown,expected?:JsonObject):unknown {
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return raw;
+  let v=raw as JsonObject;
+  if(!Array.isArray(v.stories)&&v.day&&typeof v.day==='object'&&!Array.isArray(v.day))v=v.day as JsonObject;
+  if(!Array.isArray(v.stories)&&Array.isArray(v.days)&&v.days.length===1)v=v.days[0] as JsonObject;
+  v={...v};
+  if(expected){v.date=expected.date;v.requestedCount=expected.requestedCount;if(typeof v.routine!=='string')v.routine=expected.routine??'';}
+  v.requestedCount=asInt(v.requestedCount);v.routine=clip(asText(v.routine),3000);
+  if(typeof v.id!=='string'||!v.id.trim())v.id=`day-${String(v.date??'')}`;
+  if(Array.isArray(v.stories)){
+    const count=Number(v.requestedCount);const ids=new Set<string>();
+    v.stories=(Number.isInteger(count)?v.stories.slice(0,count):v.stories).map((s,i)=>{
+      const frame=normalizeFrame(s,i,String(v.id)) as JsonObject;
+      if(frame&&typeof frame==='object'&&ids.has(String(frame.id)))frame.id=`${String(frame.id)}-${i+1}`;
+      if(frame&&typeof frame==='object')ids.add(String(frame.id));return frame;
+    });
+  }
+  return v;
+}
+function frame(raw:unknown,path='story'):JsonObject {
+  const v=object(raw);
+  for(const key of ['id','narrative','scene','tool'])if(typeof v[key]!=='string'||!(v[key] as string).trim()||(v[key] as string).length>(key==='id'?200:1600))throw invalidOutput(`${path}.${key}`);
+  if(typeof v.speech!=='string'||v.speech.length>1600)throw invalidOutput(`${path}.speech`);
+  if(typeof v.onScreen!=='string'||v.onScreen.length>1000)throw invalidOutput(`${path}.onScreen`);
+  if(!['retain','engage','convert'].includes(String(v.goal)))throw invalidOutput(`${path}.goal`);
   if(!Number.isInteger(v.position)||Number(v.position)<1||Number(v.position)>15)throw new PilotError('INVALID_STORY_POSITION');return v;
 }
-function day(raw:unknown,expected?:JsonObject):JsonObject {
-  const v=fields(raw,['id','date']);string(v.routine,3000);
+function day(raw:unknown,expected?:JsonObject,path='day'):JsonObject {
+  const v=object(normalizeStoryDay(raw,expected));
+  if(typeof v.id!=='string'||!v.id.trim())throw invalidOutput(`${path}.id`);
+  if(typeof v.routine!=='string')throw invalidOutput(`${path}.routine`);
   const parsedDate=new Date(String(v.date)+'T12:00:00Z');if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v.date))||Number.isNaN(parsedDate.getTime())||parsedDate.toISOString().slice(0,10)!==v.date)throw new PilotError('INVALID_DATES');
   if(!Number.isInteger(v.requestedCount)||Number(v.requestedCount)<0||Number(v.requestedCount)>15)throw new PilotError('INVALID_COUNT');
   if(expected && (v.date!==expected.date || v.requestedCount!==expected.requestedCount))throw new PilotError('STORIES_AGENDA_MISMATCH');
-  const stories=list(v.stories,Number(v.requestedCount),Number(v.requestedCount));const ids=new Set<string>();
-  stories.forEach((s,i)=>{const item=frame(s);if(item.position!==i+1||ids.has(String(item.id)))throw new PilotError('INVALID_STORY_POSITION');ids.add(String(item.id));});return v;
+  if(!Array.isArray(v.stories)||v.stories.length!==Number(v.requestedCount))throw invalidOutput(`${path}.stories.length=${Array.isArray(v.stories)?v.stories.length:'missing'}/${String(v.requestedCount)}`);
+  const ids=new Set<string>();
+  v.stories.forEach((s,i)=>{const item=frame(s,`${path}.stories[${i}]`);if(item.position!==i+1||ids.has(String(item.id)))throw new PilotError('INVALID_STORY_POSITION');ids.add(String(item.id));});return v;
 }
 function week(raw:unknown,expected?:JsonObject,initial=false):JsonObject {
   const v=fields(raw,['id','weekStart']);const dates=new Set<string>();const ids=new Set<string>();let total=0;
   const start=new Date(String(v.weekStart)+'T12:00:00Z');if(Number.isNaN(start.getTime())||start.toISOString().slice(0,10)!==v.weekStart)throw new PilotError('INVALID_DATES');
   if(expected&&v.weekStart!==expected.weekStart)throw new PilotError('STORIES_AGENDA_MISMATCH');
   list(v.days,7,7).forEach((item,i)=>{
-    const d=day(item,expected ? object((expected.days as unknown[])[i]) : undefined);
+    const d=day(item,expected ? object((expected.days as unknown[])[i]) : undefined,`week.days[${i}]`);
     const expectedDate=new Date(start);expectedDate.setUTCDate(start.getUTCDate()+i);
     if(d.date!==expectedDate.toISOString().slice(0,10)||ids.has(String(d.id)))throw new PilotError('INVALID_DATES');ids.add(String(d.id));
     if(dates.has(String(d.date)))throw new PilotError('INVALID_DATES');dates.add(String(d.date));total+=Number(d.requestedCount);
@@ -181,8 +230,8 @@ const shapes={
   idea:'{"id":"ID único","title":"título","angle":"ângulo específico","format":"reel|carousel|static|stories","briefingBasis":"input que sustenta a ideia","proofNeeded":"somente prova real necessária","cta":"próximo passo coerente"}',
   monetization:'{"id":"ID","potential":"análise do potencial sem números inventados","basis":["inputs reais usados"],"ideas":[EXATAMENTE 3 objetos {"id":"ID","title":"nome","offer":"oferta","audience":"público","basis":"vínculo ao briefing","resources":"recursos","risks":"riscos","hypothesis":"hipótese a validar"}]}',
   bio:'{"options":[EXATAMENTE 3 objetos {"id":"ID","name":"campo Nome até64caracteres","text":"BIO COMPLETA até150caracteres inclusivequebras","recommendation":"uma frase opcional"}]}',
-  matrix:'{"id":"ID","cells":[EXATAMENTE20 combinações únicas das5awareness unaware/problem/solution/offer/decision ×4purpose growth/engagement/authority/objection; cada {"id":"awareness:purpose","awareness":"enum","purpose":"enum","ideas":[UMA ideia com id,title,angle,format,briefingBasis,cta],"rationale":"relação específica com público e oferta"}]}',
-  stories:'{"id":"ID","weekStart":"YYYY-MM-DD","previousWeekId":"preservar se informado","continuationSummary":"continuidade baseada no executado informado, sem inventar publicação","days":[7 objetos {"id":"ID","date":"YYYY-MM-DD","routine":"rotina fornecida","requestedCount":0..15,"stories":[quantidade EXATA de objetos {"id":"ID","position":1..15,"goal":"retain|engage|convert","narrative":"storytelling e ligação com vizinhos","scene":"o que gravar e como","speech":"fala","onScreen":"texto","tool":"sticker/ferramenta ou nenhum","cta":"ação","feedConnection":"complemento ao feed","effort":"recursos"}]}]}',
+  matrix:'{"id":"ID","cells":[EXATAMENTE20 combinações únicas das5awareness unaware/problem/solution/offer/decision ×4purpose growth/engagement/authority/objection; cada {"id":"awareness:purpose","awareness":"enum","purpose":"enum","ideas":[UMA ideia com id,title,angle,format (exatamente reel, carousel, static ou stories),briefingBasis,cta],"rationale":"relação específica com público e oferta"}]}',
+  stories:'{"id":"ID","weekStart":"YYYY-MM-DD","previousWeekId":"preservar se informado","continuationSummary":"continuidade baseada no executado informado, sem inventar publicação","days":[7 objetos {"id":"ID","date":"YYYY-MM-DD","routine":"rotina fornecida","requestedCount":0..15,"stories":[quantidade EXATA de objetos {"id":"ID","position":1..15,"goal":"retain|engage|convert","narrative":"storytelling e ligação com vizinhos","scene":"o que gravar e como","speech":"fala","onScreen":"texto","tool":"sticker/ferramenta; escreva nenhum quando não houver","cta":"ação","feedConnection":"complemento ao feed","effort":"recursos"}]}]}',
   calendar:'[30 objetos {"day":1..30,"weekday":"dia","contentType":"formato","topic":"tema derivado matriz","caption":"orientação curta","hashtags":["até 5 tags relevantes"],"stories":["complemento opcional"]}]',
   actionPlan:'[4 objetos {"week":1..4,"tasks":[{"task":"ação","description":"como executar respeitando recursos","priority":"high|medium|low"}]}]',
   script:'{"id":"ID","title":"título","format":"formato pedido","origin":COPIAR origem fornecida,"objective":"objetivo","cta":"CTA","blocks":[{"id":"ID","label":"Cena/Slide","action":"como gravar","speech":"fala","onScreen":"texto na tela","text":"copy"}],"caption":"legenda","note":"explicação opcional curta"}',
