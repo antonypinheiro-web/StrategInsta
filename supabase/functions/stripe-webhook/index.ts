@@ -34,6 +34,13 @@ serve(createWebhookHandler({
     if (error) throw error;
     return data;
   },
+  grantPack: async (grant) => {
+    const { error } = await supabase.rpc('pilot_purchase_credits', {
+      p_user: grant.user_id, p_amount: grant.credits, p_reference: grant.reference, p_metadata: grant.metadata,
+    });
+    if (error) throw error;
+    return 'credits_granted';
+  },
   onError: (error) => console.error('[stripe-webhook] Processing failed:',
     error instanceof Error ? error.message : 'Database operation failed'),
 }));

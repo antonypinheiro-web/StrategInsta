@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight, Star } from "lucide-react";
-import { PLANS, PLAN_ORDER } from "@/types/plans";
+import { CREDIT_PACKS, brl, creditsInDeliveries, strategyPriceCents } from "@/lib/credit-packs";
 import logo from "@/assets/logo.png";
 
 // ─── Dados ────────────────────────────────────────────────────────────────────
@@ -42,20 +42,20 @@ const PERSONAS = [
     emoji: "👤",
     title: "Empreendedor",
     description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O StrategInsta faz isso por você em minutos.",
-    cta: "Plano Individual a partir de R$47/mês",
+    cta: "Comece com 30 créditos grátis",
   },
   {
     emoji: "📱",
     title: "Social Media Manager",
     description: "Você gerencia múltiplos clientes e precisa de eficiência. Entregue estratégias profissionais em fração do tempo.",
-    cta: "Plano Professional a partir de R$97/mês",
+    cta: "Pacotes a partir de R$29, sem assinatura",
     highlight: true,
   },
   {
     emoji: "🏢",
     title: "Agência de Marketing",
-    description: "Escale sua produção sem escalar sua equipe. Estratégias ilimitadas para todos os seus clientes.",
-    cta: "Plano Agency a partir de R$247/mês",
+    description: "Escale sua produção sem escalar sua equipe. Compre créditos conforme a demanda dos seus clientes.",
+    cta: "Pacote de 150 créditos por R$69",
   },
 ];
 
@@ -114,7 +114,6 @@ const FAQS = [
 
 export default function Landing() {
   const navigate = useNavigate();
-  const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const goToApp = () => navigate("/login");
@@ -259,81 +258,49 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Planos ─────────────────────────────────────────────────────────── */}
+      {/* ── Preços ────────────────────────────────────────────────────────── */}
       <section id="planos" className="py-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Planos e preços</h2>
-            <p className="text-foreground/60 mb-8">Comece grátis. Faça upgrade quando precisar de mais.</p>
-
-            {/* Toggle mensal/anual */}
-            <div className="inline-flex items-center gap-3 bg-muted rounded-full p-1">
-              <button onClick={() => setBilling("monthly")}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${billing === "monthly" ? "bg-card shadow text-foreground" : "text-foreground/50"}`}>
-                Mensal
-              </button>
-              <button onClick={() => setBilling("yearly")}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5 ${billing === "yearly" ? "bg-card shadow text-foreground" : "text-foreground/50"}`}>
-                Anual
-                <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-xs rounded-full font-bold">-30%</span>
-              </button>
-            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Preços</h2>
+            <p className="text-foreground/60">Sem assinatura. Você compra créditos quando precisar e eles não expiram.</p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {PLAN_ORDER.map((planId) => {
-              const p = PLANS[planId];
-              const isPopular = p.badge === "Mais popular";
-              const monthlyPrice = billing === "yearly" && p.price > 0
-                ? Math.round(p.yearlyPrice / 12)
-                : p.price;
-
+          <div className="grid sm:grid-cols-3 gap-6">
+            <div className="flex flex-col rounded-2xl border border-border bg-card p-6">
+              <h3 className="font-bold text-lg">Primeiro acesso</h3>
+              <div className="text-3xl font-extrabold my-3">Grátis</div>
+              <ul className="flex-1 space-y-2 mb-6 text-sm">
+                {["30 créditos ao criar a conta", "1 estratégia completa", "10 créditos para ajustes, ideias e roteiros"].map(item => (
+                  <li key={item} className="flex items-center gap-2 text-foreground/70"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{item}</li>
+                ))}
+              </ul>
+              <Button onClick={goToApp} variant="outline" size="sm">Começar grátis</Button>
+            </div>
+            {CREDIT_PACKS.map((pack, index) => {
+              const highlight = index === CREDIT_PACKS.length - 1;
               return (
-                <div key={planId} className={`relative flex flex-col rounded-2xl border p-6 ${isPopular
+                <div key={pack.id} className={`relative flex flex-col rounded-2xl border p-6 ${highlight
                   ? "border-purple-500 shadow-xl shadow-purple-500/10 bg-gradient-to-b from-purple-500/5 to-transparent"
                   : "border-border bg-card"}`}>
-                  {isPopular && (
+                  {highlight && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xs font-bold rounded-full whitespace-nowrap">
-                      Mais popular
+                      Melhor valor
                     </span>
                   )}
-
-                  <div className="mb-5">
-                    <h3 className="font-bold text-lg">{p.name}</h3>
-                    <p className="text-xs text-foreground/50 mb-3">{p.description}</p>
-                    <div className="text-3xl font-extrabold">
-                      {p.price === 0 ? "Grátis" : `R$${monthlyPrice}/mês`}
-                    </div>
-                    {billing === "yearly" && p.price > 0 && (
-                      <p className="text-xs text-foreground/40 mt-0.5">cobrado R${p.yearlyPrice}/ano</p>
-                    )}
-                  </div>
-
+                  <h3 className="font-bold text-lg">{pack.credits} créditos</h3>
+                  <div className="text-3xl font-extrabold my-3">{brl(pack.priceCents)}</div>
                   <ul className="flex-1 space-y-2 mb-6 text-sm">
-                    {[
-                      planId === "free" ? "2 estratégias (vitalício)" : `${p.strategiesPerMonth} estratégias/mês`,
-                      p.refinementsPerStrategy === -1 ? "Refinamentos ilimitados" : `${p.refinementsPerStrategy} refinamentos`,
-                      p.profileSlots === -1 ? "Clientes ilimitados" : `Até ${p.profileSlots} perfil${p.profileSlots > 1 ? "is" : ""}`,
-                      ...(p.whiteLabel ? ["White-label no export"] : []),
-                      ...(p.apiAccess ? ["Acesso à API"] : []),
-                      ...(p.premiumModel ? ["Modelo IA premium"] : []),
-                    ].map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 text-foreground/70">
-                        <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        {f}
-                      </li>
+                    {[creditsInDeliveries(pack.credits), `Estratégia completa sai a ${brl(strategyPriceCents(pack))}`, "Créditos não expiram"].map(item => (
+                      <li key={item} className="flex items-center gap-2 text-foreground/70"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{item}</li>
                     ))}
                   </ul>
-
-                  <Button onClick={goToApp}
-                    variant={isPopular ? "gradient" : "outline"}
-                    size="sm">
-                    {p.price === 0 ? "Começar grátis" : `Assinar ${p.name}`}
-                  </Button>
+                  <Button onClick={goToApp} variant={highlight ? "gradient" : "outline"} size="sm">Começar</Button>
                 </div>
               );
             })}
           </div>
+          <p className="mt-6 text-center text-xs text-foreground/50">Reembolso integral em até 7 dias para pacote não usado.</p>
         </div>
       </section>
 
