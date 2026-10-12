@@ -107,7 +107,8 @@ function normalizeIdea(raw:unknown):unknown {
 }
 function idea(raw:unknown,path='idea'):JsonObject {
   const v=fields(normalizeIdea(raw),['id','title','angle','briefingBasis'],1800);
-  if(!formats.includes(String(v.format)))throw invalidOutput(`${path}.format`);return v;
+  // Ideas no longer carry a format; drop an unrecognized one instead of failing the stage.
+  if(v.format!==undefined&&!formats.includes(String(v.format)))delete v.format;return v;
 }
 // Models sometimes wrap the matrix, add extra ideas or repeat a cell; keep the first valid shape instead of failing the paid stage.
 export function normalizeMatrix(raw:unknown):unknown {
@@ -144,6 +145,8 @@ function matrix(raw:unknown):JsonObject {
   });
   return v;
 }
+const STORY_FORMATS=['video','photo','text'];
+const STORY_FORMAT_ALIASES:Record<string,string>={'vídeo':'video',videos:'video',foto:'photo',imagem:'photo',image:'photo',texto:'text','tela de texto':'text'};
 const GOAL_ALIASES:Record<string,string>={reter:'retain',retencao:'retain','retenção':'retain',engajar:'engage',engajamento:'engage',converter:'convert',conversao:'convert','conversão':'convert'};
 const asText=(value:unknown)=>typeof value==='string'?value:value===null||value===undefined?'':typeof value==='number'?String(value):value;
 const asInt=(value:unknown)=>typeof value==='string'&&/^\d+$/.test(value.trim())?Number(value.trim()):value;
@@ -156,6 +159,7 @@ function normalizeFrame(raw:unknown,index:number,dayId:string):unknown {
   if(typeof v.tool==='string'&&!v.tool.trim())v.tool='nenhum';
   for(const [key,max] of [['narrative',1600],['scene',1600],['tool',1600],['speech',1600],['onScreen',1000]] as const)v[key]=clip(v[key],max);
   const goal=enumText(v.goal);v.goal=typeof goal==='string'?(GOAL_ALIASES[goal]??goal):goal;
+  const storyFormat=enumText(v.format);v.format=typeof storyFormat==='string'&&storyFormat?(STORY_FORMAT_ALIASES[storyFormat]??storyFormat):'video';
   v.position=index+1;
   if(typeof v.id!=='string'||!v.id.trim())v.id=`${dayId}-s${index+1}`;
   return v;
@@ -185,6 +189,7 @@ function frame(raw:unknown,path='story'):JsonObject {
   if(typeof v.speech!=='string'||v.speech.length>1600)throw invalidOutput(`${path}.speech`);
   if(typeof v.onScreen!=='string'||v.onScreen.length>1000)throw invalidOutput(`${path}.onScreen`);
   if(!['retain','engage','convert'].includes(String(v.goal)))throw invalidOutput(`${path}.goal`);
+  if(v.format!==undefined&&!STORY_FORMATS.includes(String(v.format)))throw invalidOutput(`${path}.format`);
   if(!Number.isInteger(v.position)||Number(v.position)<1||Number(v.position)>15)throw new PilotError('INVALID_STORY_POSITION');return v;
 }
 function day(raw:unknown,expected?:JsonObject,path='day'):JsonObject {
@@ -220,19 +225,19 @@ function bios(raw:unknown):unknown[] {
 }
 function calendar(raw:unknown):unknown[] {
   // Instagram accepts at most 5 hashtags per post (help.instagram.com/351460621611097); trim instead of failing the whole stage.
-  const days=list(raw,30,30); const seen=new Set<number>();for(const rawDay of days){const v=fields(rawDay,['weekday','contentType','topic','caption'],1800);const n=Number(v.day);if(!Number.isInteger(n)||n<1||n>30||seen.has(n))throw new PilotError('INVALID_CALENDAR');seen.add(n);v.hashtags=list(v.hashtags,0,30).slice(0,MAX_HASHTAGS);(v.hashtags as unknown[]).forEach(tag=>string(tag,100));}return days;
+  const days=list(raw,30,30); const seen=new Set<number>();for(const rawDay of days){const v=fields(rawDay,['weekday','contentType','topic','caption'],1800);v.contentType=normalizeFormat(v.contentType);const n=Number(v.day);if(!Number.isInteger(n)||n<1||n>30||seen.has(n))throw new PilotError('INVALID_CALENDAR');seen.add(n);v.hashtags=list(v.hashtags,0,30).slice(0,MAX_HASHTAGS);(v.hashtags as unknown[]).forEach(tag=>string(tag,100));}return days;
 }
 function actionPlan(raw:unknown):unknown[] {
   const weeks=list(raw,4,4);const seen=new Set<number>();for(const item of weeks){const v=object(item);const n=Number(v.week);if(!Number.isInteger(n)||n<1||n>4||seen.has(n))throw new PilotError('INVALID_ACTION_PLAN');seen.add(n);for(const task of list(v.tasks,1,8)){const t=fields(task,['task','description'],1800);oneOf(t.priority,['high','medium','low']);}}return weeks;
 }
 const shapes={
   text:'{"text":"texto formatável em títulos e parágrafos curtos, sem cercas markdown"}',
-  idea:'{"id":"ID único","title":"título","angle":"ângulo específico","format":"reel|carousel|static|stories","briefingBasis":"input que sustenta a ideia","proofNeeded":"somente prova real necessária","cta":"próximo passo coerente"}',
+  idea:'{"id":"ID único","title":"título","angle":"ângulo específico","briefingBasis":"input que sustenta a ideia","proofNeeded":"somente prova real necessária","cta":"próximo passo coerente"}',
   monetization:'{"id":"ID","potential":"análise do potencial sem números inventados","basis":["inputs reais usados"],"ideas":[EXATAMENTE 3 objetos {"id":"ID","title":"nome","offer":"oferta","audience":"público","basis":"vínculo ao briefing","resources":"recursos","risks":"riscos","hypothesis":"hipótese a validar"}]}',
   bio:'{"options":[EXATAMENTE 3 objetos {"id":"ID","name":"campo Nome até64caracteres","text":"BIO COMPLETA até150caracteres inclusivequebras","recommendation":"uma frase opcional"}]}',
-  matrix:'{"id":"ID","cells":[EXATAMENTE20 combinações únicas das5awareness unaware/problem/solution/offer/decision ×4purpose growth/engagement/authority/objection; cada {"id":"awareness:purpose","awareness":"enum","purpose":"enum","ideas":[UMA ideia com id,title,angle,format (exatamente reel, carousel, static ou stories),briefingBasis,cta],"rationale":"relação específica com público e oferta"}]}',
-  stories:'{"id":"ID","weekStart":"YYYY-MM-DD","previousWeekId":"preservar se informado","continuationSummary":"continuidade baseada no executado informado, sem inventar publicação","days":[7 objetos {"id":"ID","date":"YYYY-MM-DD","routine":"rotina fornecida","requestedCount":0..15,"stories":[quantidade EXATA de objetos {"id":"ID","position":1..15,"goal":"retain|engage|convert","narrative":"storytelling e ligação com vizinhos","scene":"o que gravar e como","speech":"fala","onScreen":"texto","tool":"sticker/ferramenta; escreva nenhum quando não houver","cta":"ação","feedConnection":"complemento ao feed","effort":"recursos"}]}]}',
-  calendar:'[30 objetos {"day":1..30,"weekday":"dia","contentType":"formato","topic":"tema derivado matriz","caption":"orientação curta","hashtags":["até 5 tags relevantes"],"stories":["complemento opcional"]}]',
+  matrix:'{"id":"ID","cells":[EXATAMENTE20 combinações únicas das5awareness unaware/problem/solution/offer/decision ×4purpose growth/engagement/authority/objection; cada {"id":"awareness:purpose","awareness":"enum","purpose":"enum","ideas":[UMA ideia com id,title,angle,briefingBasis,cta; sem formato, que o usuário escolhe depois],"rationale":"relação específica com público e oferta"}]}',
+  stories:'{"id":"ID","weekStart":"YYYY-MM-DD","previousWeekId":"preservar se informado","continuationSummary":"continuidade baseada no executado informado, sem inventar publicação","days":[7 objetos {"id":"ID","date":"YYYY-MM-DD","routine":"rotina fornecida","requestedCount":0..15,"stories":[quantidade EXATA de objetos {"id":"ID","position":1..15,"goal":"retain|engage|convert","narrative":"storytelling e ligação com vizinhos","scene":"o que gravar e como","speech":"fala","onScreen":"texto","format":"video|photo|text (via de regra video)","tool":"recursos do Instagram: figurinha, enquete, caixa de perguntas, quiz, texto na tela, música, link; escreva nenhum quando não houver","cta":"ação","feedConnection":"complemento ao feed","effort":"recursos"}]}]}',
+  calendar:'[30 objetos {"day":1..30,"weekday":"dia","contentType":"exatamente reel, carousel, static ou stories","topic":"ideia do conteúdo derivada da matriz","caption":"orientação curta","hashtags":["até 5 tags relevantes"],"stories":["complemento opcional"]}]',
   actionPlan:'[4 objetos {"week":1..4,"tasks":[{"task":"ação","description":"como executar respeitando recursos","priority":"high|medium|low"}]}]',
   script:'{"id":"ID","title":"título","format":"formato pedido","origin":COPIAR origem fornecida,"objective":"objetivo","cta":"CTA","blocks":[{"id":"ID","label":"Cena/Slide","action":"como gravar","speech":"fala","onScreen":"texto na tela","text":"copy"}],"caption":"legenda","note":"explicação opcional curta"}',
 };
@@ -249,12 +254,12 @@ export function buildPilotPrompt(operation:string,p:JsonObject,input:JsonObject,
     case 'instagramBio':shape=shapes.bio;task='3bios únicas, lightcopy natural com relevância/oferta/próximo passo, máximo150caracteres TOTAIS cada, nome separado. Sem benefícios/credenciais/gratuidade não fornecidos.';break;
     case 'storiesStrategy':shape=shapes.stories;task='Semana inicial com até35stories, 7dias. Use agenda fornecida; semagenda, distribua5stories/dia como proposta, não invente compromissos reais. Retenção, engajamento e conversão complementam feed. Dia0preservado.';break;
     case 'final':shape=`{"matrix":${shapes.matrix},"editorialCalendar":${shapes.calendar},"actionPlan":${shapes.actionPlan}}`;task='Use ICP revisado, monetização selecionada (ou apenas oferta atual) e Stories aprovados. Não substitua seleção do usuário. Matriz gera somente1ideia/célula, não roteiriza20ideias.';break;
-    case 'contentTable':shape=shapes.matrix;task='Matriz5níveisdeconsciência×4finalidades,1ideiaespecífica/célula. Relação com funil é aproximada.';break;
+    case 'contentTable':shape=shapes.matrix;task='Matriz de 5 níveis de consciência por 4 finalidades, 1 ideia específica por célula. Só a ideia do conteúdo: não defina formato. Relação com funil é aproximada.';break;
     case 'editorialCalendar':shape=`{"items":${shapes.calendar}}`;break;
     case 'actionPlan':shape=`{"items":${shapes.actionPlan}}`;break;
-    case 'idea':case 'variation':shape=shapes.idea;task='Gere UMA ideia para célula indicada. Variação preserva tema/objetivo e varia formato solicitado. Não gere matriz ou roteiro completo.';break;
+    case 'idea':case 'variation':shape=shapes.idea;task='Gere UMA ideia para a célula indicada, sem formato. Variação preserva tema e objetivo e muda o ângulo. Não gere matriz ou roteiro completo.';break;
     case 'refine_short':shape=JSON.stringify(p.item);task='Refine SOMENTE item enviado, mantenha exata estrutura/campos, identidade e escopo. Limite de150caracteres parabio e um único story/ideia. Não produza estratégia ou seção longa.';break;
-    case 'script':shape=shapes.script;task='Roteiro utilizável apenas para origem escolhida. Reel: cenas/falas/textonatela; carrossel: slides+legenda; estático:copy+legenda; Stories:sequência escolhida. Não criarimagem/vídeo.';break;
+    case 'script':shape=shapes.script;task='Storyboard pronto para produzir, apenas para a origem escolhida e no formato pedido. Reel: um bloco por cena, com label da cena e duração aproximada, action com enquadramento e o que mostrar, speech com a fala e onScreen com o texto na tela. Carrossel: um bloco por slide, com action descrevendo o visual e onScreen com o texto do slide. Post estático: action com a arte e onScreen com o texto da arte. Stories: um bloco por story, com action dizendo o formato (vídeo, foto ou tela de texto) e o recurso do Instagram (enquete, caixa de perguntas, figurinha, quiz, link), speech e onScreen. Sempre entregue caption com a legenda pronta para publicar (até 5 hashtags no fim, exceto Stories) e cta coerente com a finalidade. Não crie imagem nem vídeo.';break;
     case 'stories_week':shape=shapes.stories;task='Copie datas/rotina/quantidade EXATA por dia. Continue semana anterior somente com execução/feedback informado. Preserve previousWeekId.';break;
     case 'stories_day':shape='Um objeto do array days no schema: '+shapes.stories;task='Gere SOMENTE o dia escolhido com quantidade EXATA, usando vizinhos e feed como contexto sem alterá-los.';break;
     case 'monetization_plan':shape=shapes.text;task='Plano amplo SOMENTE das1a3ideias selecionadas. Proposta, entrega/operação, canais de venda, validação, recursos/dependências, indicadores e fases. Recomende esteira entrada/principal/continuidade se viável. Não gere calendário de conteúdo. Não promova serviços de terceiros, consultorias ou mentorias. Até1400palavras.';break;
@@ -280,7 +285,7 @@ export function parsePilotOutput(text:string,operation:string,p:JsonObject):unkn
     case 'idea':case 'variation':return idea(value);
     case 'stories_day':return day(value,object(p.day));
     case 'stories_week':return week(value,object(p.week));
-    case 'script':{const v=fields(value,['id','title','objective']);string(v.cta,2000);oneOf(v.format,formats);if(v.format!==(p.format??'reel'))throw new PilotError('FORMAT_MISMATCH');const expected=object(p.origin);const origin=object(v.origin);string(origin.id,200,1);oneOf(origin.kind,['idea','story','day','week','bio','section']);if(origin.id!==expected.id||origin.kind!==expected.kind)throw new PilotError('ORIGIN_MISMATCH');const ids=new Set<string>();for(const b of list(v.blocks,1,15)){const block=fields(b,['id','label']);if(ids.has(String(block.id)))throw new PilotError('DUPLICATE_ID');ids.add(String(block.id));for(const field of ['action','speech','onScreen','text'])if(block[field]!==undefined)string(block[field],2500);}return v;}
+    case 'script':{const v=fields(value,['id','title','objective']);string(v.cta,2000);oneOf(v.format,formats);if(v.format!==(p.format??'reel'))throw new PilotError('FORMAT_MISMATCH');const expected=object(p.origin);const origin=object(v.origin);string(origin.id,200,1);oneOf(origin.kind,['idea','story','day','week','bio','section','calendar']);if(origin.id!==expected.id||origin.kind!==expected.kind)throw new PilotError('ORIGIN_MISMATCH');const ids=new Set<string>();for(const b of list(v.blocks,1,15)){const block=fields(b,['id','label']);if(ids.has(String(block.id)))throw new PilotError('DUPLICATE_ID');ids.add(String(block.id));for(const field of ['action','speech','onScreen','text'])if(block[field]!==undefined)string(block[field],2500);}return v;}
     case 'refine_short':{const kind=object(p.origin).kind;if(kind==='idea')return idea(value);if(kind==='story')return frame(value);const v=fields(value,['id','text'],300);string(v.name,64);if(Array.from(String(v.text)).length>150)throw new PilotError('INVALID_BIO');return v;}
     case 'monetization_plan':return string(object(value).text,18000,100);
     case 'attachment_ocr':{const v=object(value);string(v.text,30000);list(v.notices,0,15).forEach(n=>string(n,800));if(typeof v.limited!=='boolean')throw new PilotError('INVALID_OUTPUT');return v;}

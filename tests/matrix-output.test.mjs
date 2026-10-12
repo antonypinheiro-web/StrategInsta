@@ -28,8 +28,9 @@ test('harmless model deviations are normalized instead of failing the paid stage
 
 test('real structural failures still fail and report a content-free reason', () => {
   assert.equal(reasonOf(() => parse({ id: 'm', cells: cells().slice(0, 19) })), 'INVALID_OUTPUT:matrix.cells.length=19');
+  // Ideas no longer require a format: an unrecognized one is dropped instead of failing the stage.
   const badFormat = cells(); badFormat[3].ideas = [idea('x', 'podcast')];
-  assert.equal(reasonOf(() => parse({ id: 'm', cells: badFormat })), 'INVALID_OUTPUT:matrix.cells[3].ideas[0].format');
+  assert.equal(parse({ id: 'm', cells: badFormat }).cells[3].ideas[0].format, undefined);
   const noIdea = cells(); noIdea[5].ideas = [];
   assert.equal(reasonOf(() => parse({ id: 'm', cells: noIdea })), 'INVALID_OUTPUT:matrix.cells[5].ideas.length=0');
   assert.equal(reasonOf(() => parsePilotOutput('{not json', 'section', { section: 'contentTable' })), 'INVALID_OUTPUT:json.parse');

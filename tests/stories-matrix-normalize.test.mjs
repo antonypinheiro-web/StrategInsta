@@ -20,9 +20,12 @@ test('descriptive formats from the models map to the allowed enum (matrix failur
   assert.deepEqual(parsed.cells.slice(0, 4).map(c => c.ideas[0].format), ['reel', 'carousel', 'static', 'stories']);
 });
 
-test('the matrix prompt now lists the allowed formats', () => {
-  const { user, system } = buildPilotPrompt('section', { section: 'contentTable' }, {}, {}, []);
-  assert.match(system + user, /exatamente reel, carousel, static ou stories/);
+test('the matrix asks only for ideas; the calendar asks for an exact format', () => {
+  const matrixPrompt = buildPilotPrompt('section', { section: 'contentTable' }, {}, {}, []);
+  assert.match(matrixPrompt.system, /sem formato/);
+  assert.doesNotMatch(matrixPrompt.system, /"format":"reel/);
+  const calendarPrompt = buildPilotPrompt('section', { section: 'editorialCalendar' }, {}, {}, []);
+  assert.match(calendarPrompt.system, /"contentType":"exatamente reel, carousel, static ou stories"/);
 });
 
 const expectedDay = { id: 'd1', date: '2026-10-13', routine: 'Rotina', requestedCount: 3, stories: [] };
