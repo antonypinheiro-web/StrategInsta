@@ -149,26 +149,45 @@ async function generate(db:Database,user:string,p:JsonObject){
     const config=validateModel(generation.selected_model);
     const image=operation==='attachment_ocr'?await loadImage(db,user,businessId,String(parameters.storagePath)):undefined;
     const attempts:JsonObject[]=[];let effective=config;let result;
-    try{result=await runModel(config,system,prompt,Deno.env.get,{image,maxOutputTokens:stage==='final'?24000:operation==='refine_short'?4000:16000});}
+    const maxOutputTokens=stage==='final'?24000:operation==='refine_short'?4000:16000;
+    const alternativeModel=async()=>{
+      const row=checked(await db.from('ai_model_configs').select('models').eq('id',generation.config_id).single());
+      if(!row)throw new PilotError('MODEL_CONFIG_REQUIRED',503);
+      return (row.models as unknown[]).map(validateModel).find(m=>m.provider!==effective.provider||m.model!==effective.model);
+    };
+    try{result=await runModel(config,system,prompt,Deno.env.get,{image,maxOutputTokens});}
     catch(error){
       const e=error instanceof PilotError?error:new PilotError('PROVIDER_UNAVAILABLE',503);
       attempts.push({provider:config.provider,model:config.model,code:e.code});
       checked(await db.from('ai_model_health').upsert({provider:config.provider,model:config.model,code:e.code,unavailable_until:new Date(Date.now()+(e.transient?5:30)*60_000).toISOString(),updated_at:new Date().toISOString()}));
       if(!e.transient)throw e;
-      const row=checked(await db.from('ai_model_configs').select('models').eq('id',generation.config_id).single());
-      if(!row)throw new PilotError('MODEL_CONFIG_REQUIRED',503);
-      const alternative=(row.models as unknown[]).map(validateModel).find(m=>m.provider!==config.provider||m.model!==config.model);
+      const alternative=await alternativeModel();
       if(!alternative)throw e;
-      effective=alternative;result=await runModel(effective,system,prompt,Deno.env.get,{image,maxOutputTokens:stage==='final'?24000:operation==='refine_short'?4000:16000});
+      effective=alternative;result=await runModel(effective,system,prompt,Deno.env.get,{image,maxOutputTokens});
     }
     const {text:discardedText,...metadata}=result;
     // Usage survives output validation failures. This update cannot finalize or spend credits.
     checked(await db.from('ai_generation_steps').update({metadata:{...metadata,attempts,fallback:attempts.length>0}}).eq('generation_id',generation.id).eq('stage',stage).eq('execution_id',claim.executionId).eq('status','processing'));
     checked(await db.from('ai_model_health').upsert({provider:effective.provider,model:effective.model,code:null,unavailable_until:null,updated_at:new Date().toISOString()}));
     const versionId=crypto.randomUUID();
-    const output=stampVersion(parsePilotOutput(result.text,operation,parameters),versionId);
+    let parsed:unknown;
+    try{parsed=parsePilotOutput(result.text,operation,parameters);}
+    catch(error){
+      if(!(error instanceof PilotError)||!['INVALID_OUTPUT','INVALID_MATRIX','DUPLICATE_ID','INVALID_INPUT'].includes(error.code))throw error;
+      // Only the rule path is logged; model output and briefing content never reach the logs.
+      console.warn('[call-ai] invalid model output',JSON.stringify({operation,stage,provider:effective.provider,model:effective.model,code:error.code,reason:(error as PilotError&{reason?:string}).reason??null}));
+      attempts.push({provider:effective.provider,model:effective.model,code:error.code,durationMs:result.durationMs,inputTokens:result.inputTokens,outputTokens:result.outputTokens,estimatedCostUsd:result.estimatedCostUsd});
+      // One retry with the other configured model, only if no fallback happened yet and time remains under the function limit.
+      // The reservation is still charged once.
+      const alternative=attempts.length===1&&Number(result.durationMs)<60_000?await alternativeModel():undefined;
+      if(!alternative)throw error;
+      effective=alternative;result=await runModel(effective,system,prompt,Deno.env.get,{image,maxOutputTokens});
+      parsed=parsePilotOutput(result.text,operation,parameters);
+    }
+    const {text:_finalText,...finalMetadata}=result;
+    const output=stampVersion(parsed,versionId);
     const aggregate=operation==='full_strategy'?aggregateStage(prior,stage,output,parameters):output;
-    generation=object(await rpc(db,'pilot_complete_step',{p_user:user,p_generation:generation.id,p_stage:stage,p_execution:claim.executionId,p_output:output,p_aggregate:aggregate,p_metadata:{...metadata,versionId,attempts,fallback:attempts.length>0,effectiveConfig:effective,origin:parameters.origin??null}}));
+    generation=object(await rpc(db,'pilot_complete_step',{p_user:user,p_generation:generation.id,p_stage:stage,p_execution:claim.executionId,p_output:output,p_aggregate:aggregate,p_metadata:{...finalMetadata,versionId,attempts,fallback:attempts.length>0,effectiveConfig:effective,origin:parameters.origin??null}}));
     return {generation,wallet:await wallet(db,user)};
   }catch(error){
     const code=error instanceof PilotError?error.code:'GENERATION_FAILED';
