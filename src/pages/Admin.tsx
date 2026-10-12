@@ -27,6 +27,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { adminService } from '@/services/adminService';
 import { AccountViewSwitch } from '@/components/AccountViewSwitch';
 import { AdminModelSettings } from '@/components/AdminModelSettings';
+import { useAskDialog } from '@/components/AskDialog';
 import type {
   AdminAuditLogRow,
   AdminOverview,
@@ -129,6 +130,7 @@ const Admin: React.FC = () => {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserPlan, setNewUserPlan] = useState('free');
+  const { ask, dialog } = useAskDialog();
   const [creditBusy, setCreditBusy] = useState<string | null>(null);
   const creditLock = useRef(false);
   const creditAttempts = useRef<Record<string, CreditAttempt>>({});
@@ -228,10 +230,15 @@ const Admin: React.FC = () => {
   };
 
   const changePlan = async (row: AdminUserRow) => {
-    const planType = window.prompt('Novo plano: free, individual, professional ou agency', row.planType);
-    if (!planType) return;
+    const answer = await ask({
+      title: 'Alterar plano',
+      description: row.email ?? row.id,
+      fields: [{ name: 'planType', label: 'Plano', defaultValue: row.planType, options: ['free', 'individual', 'professional', 'agency'].map(value => ({ value, label: planLabels[value] })) }],
+      confirmLabel: 'Salvar plano',
+    });
+    if (!answer) return;
 
-    await adminService.setPlan({ userId: row.id, planType });
+    await adminService.setPlan({ userId: row.id, planType: answer.planType });
     toast.success('Plano atualizado.');
     await refreshAll();
   };
@@ -244,15 +251,21 @@ const Admin: React.FC = () => {
       let attempt = creditAttempts.current[slot];
       if (!attempt) {
         if (action === 'grantCredits') {
-          const rawAmount = window.prompt('Quantos créditos de IA adicionar? Cada estratégia completa usa 20.', '30');
-          if (rawAmount === null) return;
-          const amount = Number(rawAmount);
+          const answer = await ask({
+            title: 'Adicionar créditos de IA',
+            description: `${row.email ?? row.id}. Cada estratégia completa usa 20 créditos.`,
+            fields: [
+              { name: 'amount', label: 'Quantidade', type: 'number', defaultValue: '30' },
+              { name: 'reason', label: 'Motivo (fica no extrato)', defaultValue: 'Crédito manual admin' },
+            ],
+            confirmLabel: 'Adicionar créditos',
+          });
+          if (!answer) return;
+          const amount = Number(answer.amount);
           if (!Number.isSafeInteger(amount) || amount <= 0) { toast.warning('Informe uma quantidade inteira maior que zero.'); return; }
-          const reason = window.prompt('Motivo do crédito', 'Crédito manual admin');
-          if (reason === null) return;
-          attempt = { action, payload: { userId: row.id, amount, reason: reason.trim() || 'Crédito manual admin' }, key: crypto.randomUUID() };
+          attempt = { action, payload: { userId: row.id, amount, reason: answer.reason.trim() || 'Crédito manual admin' }, key: crypto.randomUUID() };
         } else {
-          if (!window.confirm(`Restaurar o saldo de IA de ${row.email ?? row.id} para 30 créditos? Isso substitui o saldo atual e fica registrado no extrato.`)) return;
+          if (!await ask({ title: 'Restaurar saldo do piloto', description: `Restaurar o saldo de IA de ${row.email ?? row.id} para 30 créditos? Isso substitui o saldo atual e fica registrado no extrato.`, confirmLabel: 'Restaurar saldo', destructive: true })) return;
           attempt = { action, payload: { userId: row.id }, key: crypto.randomUUID() };
         }
         rememberCreditAttempts({ ...creditAttempts.current, [slot]: attempt });
@@ -281,8 +294,12 @@ const Admin: React.FC = () => {
 
   const blockUser = async (row: AdminUserRow) => {
     const blocked = !row.isBlocked;
-    const reason = blocked ? window.prompt('Motivo do bloqueio', 'Bloqueio manual admin') ?? 'Bloqueio manual admin' : undefined;
-    if (blocked && !window.confirm(`Bloquear ${row.email}?`)) return;
+    let reason: string | undefined;
+    if (blocked) {
+      const answer = await ask({ title: `Bloquear ${row.email ?? row.id}?`, fields: [{ name: 'reason', label: 'Motivo do bloqueio', defaultValue: 'Bloqueio manual admin' }], confirmLabel: 'Bloquear', destructive: true });
+      if (!answer) return;
+      reason = answer.reason.trim() || 'Bloqueio manual admin';
+    }
 
     await adminService.setUserBlocked({ userId: row.id, blocked, reason });
     toast.success(blocked ? 'Usuário bloqueado.' : 'Usuário desbloqueado.');
@@ -292,16 +309,16 @@ const Admin: React.FC = () => {
   const resetUsage = (row: AdminUserRow) => runCreditAction('resetUsage', row);
 
   const saveNotes = async (row: AdminUserRow) => {
-    const notes = window.prompt('Observação interna', row.adminNotes ?? '');
-    if (notes === null) return;
-    await adminService.updateAdminNotes({ userId: row.id, notes });
+    const answer = await ask({ title: 'Observação interna', description: row.email ?? row.id, fields: [{ name: 'notes', label: 'Observação', type: 'textarea', defaultValue: row.adminNotes ?? '' }], confirmLabel: 'Salvar' });
+    if (!answer) return;
+    await adminService.updateAdminNotes({ userId: row.id, notes: answer.notes });
     toast.success('Observação salva.');
     await refreshUsers();
   };
 
   const archiveStrategy = async (row: AdminStrategyRow) => {
     const isArchived = Boolean(row.generated_strategy?.archived);
-    if (!window.confirm(`${isArchived ? 'Reativar' : 'Arquivar'} a estratégia "${row.name}"?`)) return;
+    if (!await ask({ title: `${isArchived ? 'Reativar' : 'Arquivar'} a estratégia "${row.name}"?`, confirmLabel: isArchived ? 'Reativar' : 'Arquivar' })) return;
     await adminService.archiveStrategy({ strategyId: row.id, archived: !isArchived });
     toast.success(isArchived ? 'Estratégia reativada.' : 'Estratégia arquivada.');
     await refreshStrategies();
@@ -334,6 +351,7 @@ const Admin: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {dialog}
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[260px_1fr]">
         <aside className="border-r border-border bg-card/50 p-4 lg:sticky lg:top-0 lg:h-screen">
           <div className="mb-6 flex items-center gap-2 px-2">

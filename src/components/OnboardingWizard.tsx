@@ -10,6 +10,7 @@ import type { BriefingData } from '@/lib/briefing';
 import type { BriefingAttachmentService } from '@/types/briefing';
 import { AttachmentsPanel } from '@/components/briefing/AttachmentsPanel';
 import { ProfileBaselineEditor } from '@/components/briefing/ProfileBaselineEditor';
+import { useAskDialog } from '@/components/AskDialog';
 import logo from '@/assets/logo.png';
 
 interface Props {
@@ -52,6 +53,7 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
     return initialValues ? { data: normalizeBriefing(initialValues), step: 0 } : draft ?? { data: normalizeBriefing(null), step: 0 };
   });
   const [data, setData] = useState<BriefingData>(initial.data);
+  const { ask, dialog } = useAskDialog();
   const [previewDraft, setPreviewDraft] = useState(() => {
     if (!import.meta.env.DEV || import.meta.env.MODE !== 'development' || previewMode || !isAuthenticated) return null;
     try { return readBriefingDraft(window.localStorage, 'local-ui-fixture'); } catch { return null; }
@@ -99,13 +101,13 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
       setLastSaved(JSON.stringify(data)); setPaused(true); setMessage('');
     } catch { setMessage('Não foi possível salvar neste navegador. Suas respostas continuam nesta tela.'); }
   }
-  function requestLogout() {
-    if (dirty && !window.confirm('Sair sem salvar as respostas? Cancele e use "Salvar e sair" para guardar o briefing neste navegador.')) return;
+  async function requestLogout() {
+    if (dirty && !await ask({ title: 'Sair sem salvar as respostas?', description: 'Cancele e use "Salvar e sair" para guardar o briefing neste navegador.', confirmLabel: 'Sair sem salvar', destructive: true })) return;
     void onLogout?.();
   }
-  function importPreview() {
+  async function importPreview() {
     if (!previewDraft || !isAuthenticated) return;
-    if (!window.confirm('Carregar as respostas da prévia nesta tela para revisão? As respostas atuais da tela serão substituídas. Nenhum crédito será consumido.')) return;
+    if (!await ask({ title: 'Carregar as respostas da prévia?', description: 'As respostas atuais da tela serão substituídas para revisão. Nenhum crédito será consumido.', confirmLabel: 'Carregar prévia' })) return;
     setData(previewDraft.data); setStep(previewDraft.step); setPaused(false);
     setErrors({}); setPreviewDraft(null);
     setMessage('Respostas da prévia carregadas. Revise, salve na sua conta e confira o saldo antes de gerar.');
@@ -152,18 +154,18 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
     ['Recursos', [(data.desiredPostingFrequency === 'personalizado' ? 'Definir com a estratégia' : postingFrequencyOptions.find((item) => item.value === data.desiredPostingFrequency)?.label ?? 'Não definido'),
       data.weeklyTime, data.availableResources, data.recordingComfort, data.capacityToServe].filter(Boolean).join('\n'), 3],
   ];
-  return <section className="briefing-workspace min-h-screen bg-background text-foreground">
+  return <section className="briefing-workspace min-h-screen bg-background text-foreground">{dialog}
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-5 py-5 sm:px-12">
         <div className="flex items-center gap-5"><img src={logo} alt="StrategInsta" className="logo-theme-aware h-8 w-auto sm:h-9" />
           <span className="hidden border-l border-border pl-5 text-sm text-muted-foreground sm:inline">Briefing do negócio</span></div>
-        <div className="flex flex-wrap items-center gap-2">{toolbar}{onLogout && <Button variant="ghost" onClick={requestLogout} disabled={busy}>Sair</Button>}{!paused && <Button variant="ghost" onClick={saveAndExit} disabled={!isAuthenticated || busy}><Save className="mr-2 h-4 w-4" />Salvar e sair</Button>}</div>
+        <div className="flex flex-wrap items-center gap-2">{toolbar}{onLogout && <Button variant="ghost" onClick={() => void requestLogout()} disabled={busy}>Sair</Button>}{!paused && <Button variant="ghost" onClick={saveAndExit} disabled={!isAuthenticated || busy}><Save className="mr-2 h-4 w-4" />Salvar e sair</Button>}</div>
       </div>
     </header>
     {previewDraft && <div className="mx-auto my-5 max-w-[1096px] rounded-xl border border-primary/30 bg-muted/30 p-5 text-sm">
       <p className="font-semibold">Há um briefing salvo na prévia deste navegador.</p>
       <p className="mt-2 break-words text-muted-foreground">Marca: {previewDraft.data.brandName || previewDraft.data.username || 'não informada'}. A importação só preenche o formulário, sem gerar ou gastar créditos.</p>
-      <Button className="mt-3" variant="outline" onClick={importPreview}>Trazer respostas da prévia</Button>
+      <Button className="mt-3" variant="outline" onClick={() => void importPreview()}>Trazer respostas da prévia</Button>
     </div>}
     {paused ? <div className="mx-auto max-w-xl px-5 py-24">
       <h1 ref={heading} tabIndex={-1} className="text-3xl font-bold outline-none">Seu rascunho está salvo.</h1>
