@@ -16,8 +16,11 @@ export const contentPurposes = [
 export type AwarenessLevel = typeof awarenessLevels[number]['id'];
 export type ContentPurpose = typeof contentPurposes[number]['id'];
 export type ContentFormat = 'reel' | 'carousel' | 'static' | 'stories';
+export type StoryFormat = 'video' | 'photo' | 'text';
 export interface ContentIdea {
-  id: string; title: string; angle: string; format: ContentFormat;
+  id: string; title: string; angle: string;
+  /** Legacy matrices stored a format; new ideas leave it to the user at generation time. */
+  format?: ContentFormat;
   briefingBasis: string; proofNeeded?: string; cta?: string; versionId?: string;
 }
 export interface MatrixCell {
@@ -27,7 +30,7 @@ export interface MatrixCell {
 export interface ContentMatrix { id: string; cells: MatrixCell[]; }
 export interface StoryFrame {
   id: string; position: number; goal: 'retain' | 'engage' | 'convert';
-  narrative: string; scene: string; speech: string; onScreen: string; tool: string;
+  narrative: string; scene: string; speech: string; onScreen: string; tool: string; format?: StoryFormat;
   cta?: string; feedConnection?: string; effort?: string; versionId?: string;
 }
 export interface StoriesDay {
@@ -45,7 +48,7 @@ export interface MonetizationIdea {
 export interface MonetizationAnalysis { id: string; potential: string; basis: string[]; ideas: MonetizationIdea[]; }
 export interface BioOption { id: string; name: string; text: string; recommendation?: string; versionId?: string; }
 export interface ContentOrigin {
-  kind: 'idea' | 'story' | 'day' | 'week' | 'bio' | 'section';
+  kind: 'idea' | 'story' | 'day' | 'week' | 'bio' | 'section' | 'calendar';
   id: string; cellId?: string; weekId?: string; dayId?: string;
   awareness?: AwarenessLevel; purpose?: ContentPurpose;
 }

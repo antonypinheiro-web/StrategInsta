@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { awarenessLevels, contentPurposes } from '../../types/workspace.ts';
-import type { PilotWorkspaceData, WorkspaceOperation, WorkspaceGenerationPayload, WorkspaceGenerationResult, StoriesDay, StoriesWeek, ContentOrigin, ContentIdea, ContentMatrix, StoryFrame, MonetizationAnalysis, BioOption, GeneratedContent } from '../../types/workspace.ts';
+import type { ContentFormat, PilotWorkspaceData, WorkspaceOperation, WorkspaceGenerationPayload, WorkspaceGenerationResult, StoriesDay, StoriesWeek, ContentOrigin, ContentIdea, ContentMatrix, StoryFrame, MonetizationAnalysis, BioOption, GeneratedContent } from '../../types/workspace.ts';
 
 const text = z.string().trim().min(1).max(12000);
 const optionalText = z.string().max(12000).optional();
@@ -10,15 +10,15 @@ const awareness = z.enum(['unaware', 'problem', 'solution', 'offer', 'decision']
 const purpose = z.enum(['growth', 'engagement', 'authority', 'objection']);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => { const parsed = new Date(`${v}T12:00:00Z`); return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === v; }, 'Data inválida');
 const uniqueIds = (items: { id?: string }[]) => new Set(items.map(item => item.id)).size === items.length;
-export const ideaSchema = z.object({ id, title: text, angle: text, format, briefingBasis: text, proofNeeded: optionalText, cta: optionalText, versionId: id.optional() }) as z.ZodType<ContentIdea>;
+export const ideaSchema = z.object({ id, title: text, angle: text, format: format.optional(), briefingBasis: text, proofNeeded: optionalText, cta: optionalText, versionId: id.optional() }) as z.ZodType<ContentIdea>;
 export const matrixSchema = z.object({ id, cells: z.array(z.object({ id, awareness, purpose, ideas: z.array(ideaSchema).max(30).refine(uniqueIds), rationale: optionalText }).refine(cell => cell.ideas.length > 0 || !!cell.rationale?.trim(), 'Célula vazia precisa de justificativa')).length(20) }).refine(matrix => new Set(matrix.cells.map(cell => `${cell.awareness}:${cell.purpose}`)).size === 20 && uniqueIds(matrix.cells), 'A matriz precisa das vinte células distintas') as z.ZodType<ContentMatrix>;
-export const storySchema = z.object({ id, position: z.number().int().min(1).max(15), goal: z.enum(['retain', 'engage', 'convert']), narrative: text, scene: text, speech: z.string().max(12000), onScreen: z.string().max(1000), tool: text, cta: optionalText, feedConnection: optionalText, effort: optionalText, versionId: id.optional() }) as z.ZodType<StoryFrame>;
+export const storySchema = z.object({ id, position: z.number().int().min(1).max(15), goal: z.enum(['retain', 'engage', 'convert']), narrative: text, scene: text, speech: z.string().max(12000), onScreen: z.string().max(1000), tool: text, format: z.enum(['video', 'photo', 'text']).optional(), cta: optionalText, feedConnection: optionalText, effort: optionalText, versionId: id.optional() }) as z.ZodType<StoryFrame>;
 export const daySchema = z.object({ id, date, routine: z.string().max(3000), requestedCount: z.number().int().min(0).max(15), offerOrEvent: optionalText, restrictions: optionalText, stories: z.array(storySchema).max(15) }).refine(day => day.stories.length === day.requestedCount && uniqueIds(day.stories) && day.stories.every((story, index) => story.position === index + 1), 'A quantidade e a sequência precisam corresponder ao dia solicitado') as z.ZodType<StoriesDay>;
 export const weekSchema = z.object({ id, weekStart: date, previousWeekId: id.optional(), continuationSummary: optionalText, executionFeedback: optionalText, days: z.array(daySchema).length(7) }).refine(week => uniqueIds(week.days) && week.days.every((day, index) => day.date === addDays(week.weekStart, index)), 'A semana precisa de sete dias consecutivos') as z.ZodType<StoriesWeek>;
 export const monetizationSchema = z.object({ id, potential: text, basis: z.array(text).min(1).max(10), ideas: z.array(z.object({ id, title: text, offer: text, audience: text, basis: text, resources: text, risks: text, hypothesis: text })).length(3).refine(uniqueIds) }) as z.ZodType<MonetizationAnalysis>;
 export const bioSchema = z.object({ id, name: z.string().max(64), text: text.refine(value => bioLength(value) <= 150, 'A bio excede 150 caracteres'), recommendation: optionalText, versionId: id.optional() }) as z.ZodType<BioOption>;
 export const biosSchema = z.array(bioSchema).length(3).refine(uniqueIds) as z.ZodType<BioOption[]>;
-export const originSchema = z.object({ kind: z.enum(['idea', 'story', 'day', 'week', 'bio', 'section']), id, cellId: id.optional(), weekId: id.optional(), dayId: id.optional(), awareness: awareness.optional(), purpose: purpose.optional() }) as z.ZodType<ContentOrigin>;
+export const originSchema = z.object({ kind: z.enum(['idea', 'story', 'day', 'week', 'bio', 'section', 'calendar']), id, cellId: id.optional(), weekId: id.optional(), dayId: id.optional(), awareness: awareness.optional(), purpose: purpose.optional() }) as z.ZodType<ContentOrigin>;
 export const scriptSchema = z.object({ id, title: text, format, origin: originSchema, objective: text, cta: z.string().max(2000), blocks: z.array(z.object({ id, label: text, action: optionalText, speech: optionalText, onScreen: optionalText, text: optionalText })).min(1).max(30).refine(uniqueIds), caption: optionalText, note: optionalText, versionId: id.optional(), createdAt: z.string().optional() }) as z.ZodType<GeneratedContent>;
 
 export function emptyWorkspace(): PilotWorkspaceData { return { schemaVersion: 1, selectedMonetizationIds: [], scripts: [] }; }
@@ -30,6 +30,16 @@ export function draftWeek(weekStart: string, previousWeek?: StoriesWeek): Storie
 export function storiesCredits(days: Pick<StoriesDay, 'requestedCount'>[], scope: 'day' | 'week') {
   const total = days.reduce((sum, day) => sum + day.requestedCount, 0);
   return total === 0 ? 0 : Math.ceil(total / (scope === 'day' ? 5 : 35)) * (scope === 'day' ? 2 : 10);
+}
+/** Calendar days store the format as text; map it to the generator formats. */
+export function calendarFormat(value: string | undefined): ContentFormat | undefined {
+  const text = (value ?? '').trim().toLowerCase();
+  if (['reel', 'carousel', 'static', 'stories'].includes(text)) return text as ContentFormat;
+  if (/reel|v[ií]deo/.test(text)) return 'reel';
+  if (/carros|carousel/.test(text)) return 'carousel';
+  if (/stor/.test(text)) return 'stories';
+  if (/post|est[aá]tic|static|imagem|foto/.test(text)) return 'static';
+  return undefined;
 }
 export function visibleIdeas<T>(ideas: T[]) { return ideas.slice(-3); }
 export function allCellKeys() { return awarenessLevels.flatMap(level => contentPurposes.map(item => `${level.id}:${item.id}`)); }
