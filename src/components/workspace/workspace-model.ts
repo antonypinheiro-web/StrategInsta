@@ -19,7 +19,7 @@ export const monetizationSchema = z.object({ id, potential: text, basis: z.array
 export const bioSchema = z.object({ id, name: z.string().max(64), text: text.refine(value => bioLength(value) <= 150, 'A bio excede 150 caracteres'), recommendation: optionalText, versionId: id.optional() }) as z.ZodType<BioOption>;
 export const biosSchema = z.array(bioSchema).length(3).refine(uniqueIds) as z.ZodType<BioOption[]>;
 export const originSchema = z.object({ kind: z.enum(['idea', 'story', 'day', 'week', 'bio', 'section', 'calendar']), id, cellId: id.optional(), weekId: id.optional(), dayId: id.optional(), awareness: awareness.optional(), purpose: purpose.optional() }) as z.ZodType<ContentOrigin>;
-export const scriptSchema = z.object({ id, title: text, format, origin: originSchema, objective: text, cta: z.string().max(2000), blocks: z.array(z.object({ id, label: text, action: optionalText, speech: optionalText, onScreen: optionalText, text: optionalText })).min(1).max(30).refine(uniqueIds), caption: optionalText, note: optionalText, versionId: id.optional(), createdAt: z.string().optional() }) as z.ZodType<GeneratedContent>;
+export const scriptSchema = z.object({ id, title: text, format, origin: originSchema, objective: text, cta: z.string().max(2000), blocks: z.array(z.object({ id, label: text, action: optionalText, speech: optionalText, onScreen: optionalText, text: optionalText })).min(1).max(30).refine(uniqueIds), caption: optionalText, note: optionalText, versionId: id.optional(), createdAt: z.string().optional(), status: z.enum(['generated', 'posted']).optional(), postedAt: z.string().optional() }) as z.ZodType<GeneratedContent>;
 
 export function emptyWorkspace(): PilotWorkspaceData { return { schemaVersion: 1, selectedMonetizationIds: [], scripts: [] }; }
 export function bioLength(value: string) { return Array.from(value).length; }
@@ -74,7 +74,7 @@ export function applyWorkspaceResult(data: PilotWorkspaceData, operation: Worksp
     next.storiesAgenda = { ...agenda, days: agenda.days.map(current => current.id === payload.day!.id ? next.storiesWeek!.days.find(generated => generated.id === current.id)! : current) };
   } else if (operation === 'content_script') {
     const script = version(scriptSchema.parse(parsedOutput));
-    next.scripts = [...data.scripts, { ...script, origin: payload.origin ?? script.origin }];
+    next.scripts = [...data.scripts, { ...script, origin: payload.origin ?? script.origin, status: 'generated', createdAt: script.createdAt ?? new Date().toISOString() }];
   } else if (operation === 'idea_generate' || operation === 'format_variation') {
     const idea = version(ideaSchema.parse(parsedOutput));
     if (!data.matrix || !payload.cell || !data.matrix.cells.some(cell => cell.id === payload.cell!.id)) throw new Error('A célula de origem não está disponível.');
