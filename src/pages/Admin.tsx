@@ -252,20 +252,20 @@ const Admin: React.FC = () => {
       if (!attempt) {
         if (action === 'grantCredits') {
           const answer = await ask({
-            title: 'Adicionar créditos de IA',
-            description: `${row.email ?? row.id}. Cada estratégia completa usa 20 créditos.`,
+            title: 'Adicionar TPs',
+            description: `${row.email ?? row.id}. Cada estratégia completa usa 20 TPs.`,
             fields: [
               { name: 'amount', label: 'Quantidade', type: 'number', defaultValue: '30' },
-              { name: 'reason', label: 'Motivo (fica no extrato)', defaultValue: 'Crédito manual admin' },
+              { name: 'reason', label: 'Motivo (fica no extrato)', defaultValue: 'Recarga manual admin' },
             ],
-            confirmLabel: 'Adicionar créditos',
+            confirmLabel: 'Adicionar TPs',
           });
           if (!answer) return;
           const amount = Number(answer.amount);
           if (!Number.isSafeInteger(amount) || amount <= 0) { toast.warning('Informe uma quantidade inteira maior que zero.'); return; }
-          attempt = { action, payload: { userId: row.id, amount, reason: answer.reason.trim() || 'Crédito manual admin' }, key: crypto.randomUUID() };
+          attempt = { action, payload: { userId: row.id, amount, reason: answer.reason.trim() || 'Recarga manual admin' }, key: crypto.randomUUID() };
         } else {
-          if (!await ask({ title: 'Restaurar saldo do piloto', description: `Restaurar o saldo de IA de ${row.email ?? row.id} para 30 créditos? Isso substitui o saldo atual e fica registrado no extrato.`, confirmLabel: 'Restaurar saldo', destructive: true })) return;
+          if (!await ask({ title: 'Restaurar saldo do piloto', description: `Restaurar o saldo de IA de ${row.email ?? row.id} para 30 TPs? Isso substitui o saldo atual e fica registrado no extrato.`, confirmLabel: 'Restaurar saldo', destructive: true })) return;
           attempt = { action, payload: { userId: row.id }, key: crypto.randomUUID() };
         }
         rememberCreditAttempts({ ...creditAttempts.current, [slot]: attempt });
@@ -279,9 +279,9 @@ const Admin: React.FC = () => {
       const remaining = { ...creditAttempts.current }; delete remaining[slot];
       rememberCreditAttempts(remaining);
       if (result.wallet) setUsers(current => current.map(userRow => userRow.id === row.id ? { ...userRow, aiWallet: result.wallet } : userRow));
-      toast.success(action === 'grantCredits' ? 'Créditos confirmados na carteira.' : 'Saldo do piloto restaurado.');
+      toast.success(action === 'grantCredits' ? 'TPs confirmados na carteira.' : 'Saldo do piloto restaurado.');
       const refreshes = await Promise.allSettled([refreshUsers(), refreshOverview(), refreshLogs()]);
-      if (refreshes.some(result => result.status === 'rejected')) toast.warning('A alteração foi confirmada, mas a lista ainda não foi atualizada por completo. Use Atualizar; não é necessário repetir o crédito.');
+      if (refreshes.some(result => result.status === 'rejected')) toast.warning('A alteração foi confirmada, mas a lista ainda não foi atualizada por completo. Use Atualizar; não é necessário repetir a recarga.');
     } catch (error) {
       toast.error(`${error instanceof Error ? error.message : 'Não foi possível confirmar a operação.'} Use Retomar para consultar ou concluir a mesma tentativa.`);
     } finally {
@@ -384,7 +384,7 @@ const Admin: React.FC = () => {
           <header className="mb-6 flex flex-col gap-4 border-b border-border pb-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-2xl font-bold">Painel administrativo</h1>
-              <p className="text-sm text-muted-foreground">Usuários, créditos, uso, estratégias e eventos do app.</p>
+              <p className="text-sm text-muted-foreground">Usuários, TPs, uso, estratégias e eventos do app.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select value={range} onChange={(event) => setRange(event.target.value as AdminRange)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
@@ -474,7 +474,7 @@ const Admin: React.FC = () => {
               </Card>
 
               <AdminTableHeader title="Usuários" count={filteredUsers.length} onExport={() => exportCsv('strateginsta-users.csv', filteredUsers as unknown as Record<string, unknown>[])} />
-              <p className="text-xs text-muted-foreground">Os créditos de IA vêm da carteira atual. A contagem anterior de estratégias e extras é histórica e não é somada a esse saldo.</p>
+              <p className="text-xs text-muted-foreground">Os TPs vêm da carteira atual. A contagem anterior de estratégias e extras é histórica e não é somada a esse saldo.</p>
               <div className="overflow-x-auto rounded-lg border border-border">
                 <table className="w-full min-w-[1450px] text-sm">
                   <thead className="bg-muted/60 text-left"><tr><th className="p-3">Usuário</th><th>Plano</th><th>Disponível (IA)</th><th>Reservado</th><th>Saldo total</th><th>Uso anterior</th><th>Último acesso</th><th>Status</th><th className="text-right pr-3">Ações</th></tr></thead>
@@ -491,7 +491,7 @@ const Admin: React.FC = () => {
                         <td>{row.isBlocked ? <Badge variant="destructive">Bloqueado</Badge> : <Badge variant="outline">Ativo</Badge>}</td>
                         <td className="space-x-2 pr-3 text-right">
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy} onClick={() => changePlan(row)}>Plano</Button>
-                          <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy || !!pendingCredits[`resetUsage:${row.id}`]} onClick={() => grantCredits(row)}>{creditBusy === `grantCredits:${row.id}` && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}{pendingCredits[`grantCredits:${row.id}`] ? 'Retomar crédito' : 'Créditos'}</Button>
+                          <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy || !!pendingCredits[`resetUsage:${row.id}`]} onClick={() => grantCredits(row)}>{creditBusy === `grantCredits:${row.id}` && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}{pendingCredits[`grantCredits:${row.id}`] ? 'Retomar TP' : 'TPs'}</Button>
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy || !!pendingCredits[`grantCredits:${row.id}`]} onClick={() => resetUsage(row)}>{creditBusy === `resetUsage:${row.id}` && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}{pendingCredits[`resetUsage:${row.id}`] ? 'Retomar reset' : 'Reset'}</Button>
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy} onClick={() => saveNotes(row)}>Nota</Button>
                           <Button size="sm" disabled={isLoading || !!creditBusy} variant={row.isBlocked ? 'outline' : 'destructive'} onClick={() => blockUser(row)}>{row.isBlocked ? 'Desbloquear' : 'Bloquear'}</Button>

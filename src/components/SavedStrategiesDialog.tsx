@@ -56,7 +56,7 @@ export function SavedStrategiesDialog({ userId, onOpen }: Props) {
     <Button variant="outline" onClick={() => setOpen(true)}>Estratégias salvas</Button>
     <Dialog open={open} onOpenChange={value => { if (!opening) setOpen(value); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle>Suas estratégias</DialogTitle><DialogDescription>Abra uma estratégia salva na sua conta. Consultar não usa créditos.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Suas estratégias</DialogTitle><DialogDescription>Abra uma estratégia salva na sua conta. Consultar não usa TPs.</DialogDescription></DialogHeader>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {loading ? <p role="status">Buscando estratégias...</p> : <div className="space-y-3">
           {!rows.length && !error && <p>Nenhuma estratégia salva ainda.</p>}

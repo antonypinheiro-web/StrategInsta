@@ -143,7 +143,7 @@ export function AttachmentsPanel({ value = [], service, onChange, onPendingChang
         <p className="text-xs text-muted-foreground">{item.summary.length}/{ATTACHMENT_LIMITS.summaryCharacters} caracteres. {item.extraction?.text.length > item.summary.length ? 'A seleção inicial contém apenas o começo do texto. Substitua pelos trechos relevantes antes de aprovar.' : 'Somente este texto revisado será enviado à IA.'}</p>
         {item.status === 'approved' ? <Button variant="outline" size="sm" onClick={() => { const next = latest.current.map((draft): AttachmentDraft => draft.id === item.id ? { ...draft, approved: undefined, status: 'review' } : draft); setItems(next); emit(next); }}>Revisar fonte</Button>
           : <div className="flex flex-wrap gap-3"><Button variant="outline" onClick={() => approve(item)} disabled={!item.storagePath || disabled}>Aprovar fonte para a estratégia</Button>
-            {item.file && item.kind && isImageAttachment(item.kind) && service?.extractImage && <Button variant="outline" onClick={() => void process(item, true)} disabled={!item.storagePath || disabled}>Ler texto com IA · {service.imageExtractionCost ?? 2} créditos</Button>}</div>}
+            {item.file && item.kind && isImageAttachment(item.kind) && service?.extractImage && <Button variant="outline" onClick={() => void process(item, true)} disabled={!item.storagePath || disabled}>Ler texto com IA · {service.imageExtractionCost ?? 2} TPs</Button>}</div>}
       </>}
       {item.status === 'error' && item.file && <Button variant="outline" onClick={() => void process(item)}>Tentar novamente</Button>}
     </article>)}

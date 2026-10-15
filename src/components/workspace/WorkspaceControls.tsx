@@ -8,7 +8,7 @@ import { Loader2, Pencil, MessageSquare } from 'lucide-react';
 import type { ContentFeedback } from '@/types/workspace';
 
 export function CostButton({ children, credits, busy, ...props }: React.ComponentProps<typeof Button> & { credits?: number; busy?: boolean }) {
-  return <Button {...props} disabled={props.disabled || busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{children}{credits !== undefined && <span className="ml-1 whitespace-nowrap">· {credits} {credits === 1 ? 'crédito' : 'créditos'}</span>}</Button>;
+  return <Button {...props} disabled={props.disabled || busy}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{children}{credits !== undefined && <span className="ml-1 whitespace-nowrap">· {credits} {credits === 1 ? 'TP' : 'TPs'}</span>}</Button>;
 }
 export interface EditField { key: string; label: string; value: string; maxLength: number; required?: boolean; }
 export function ManualEditor({ title, fields, onSave, disabled }: { title: string; fields: EditField[]; onSave: (values: Record<string, string>) => Promise<void>; disabled?: boolean }) {
@@ -21,7 +21,7 @@ export function ManualEditor({ title, fields, onSave, disabled }: { title: strin
   const save = async () => { setSaving(true); setError(''); try { await onSave(values); setOpen(false); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Não foi possível salvar. Sua edição continua aqui.'); } finally { setSaving(false); } };
   return <>
     <Button size="sm" variant="outline" disabled={disabled} onClick={() => { setValues(Object.fromEntries(fields.map(field => [field.key, field.value]))); setError(''); setOpen(true); }}><Pencil className="mr-1 h-3.5 w-3.5" />Editar</Button>
-    <Dialog open={open} onOpenChange={value => !saving && setOpen(value)}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>Salvar cria uma revisão. A edição manual usa 0 créditos.</DialogDescription></DialogHeader>
+    <Dialog open={open} onOpenChange={value => !saving && setOpen(value)}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>Salvar cria uma revisão. A edição manual usa 0 TPs.</DialogDescription></DialogHeader>
       <div className="space-y-5">{fields.map(field => <div key={field.key} className="space-y-2"><Label htmlFor={`edit-${field.key}`}>{field.label}</Label><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border bg-muted/30 p-3"><p className="mb-2 text-xs font-medium text-muted-foreground">Versão atual</p><p className="whitespace-pre-wrap text-sm">{field.value}</p></div><div><Textarea id={`edit-${field.key}`} value={values[field.key] ?? ''} onChange={event => setValues(current => ({ ...current, [field.key]: event.target.value }))} rows={5} /><p className={`mt-1 text-xs ${Array.from(values[field.key] ?? '').length > field.maxLength ? 'text-destructive' : 'text-muted-foreground'}`}>{Array.from(values[field.key] ?? '').length}/{field.maxLength}</p></div></div></div>)}</div>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}<div className="flex justify-end gap-2"><Button variant="outline" disabled={saving} onClick={() => setOpen(false)}>Cancelar</Button><CostButton credits={0} busy={saving} disabled={!changed || !valid} onClick={save}>Salvar revisão</CostButton></div>
     </DialogContent></Dialog>

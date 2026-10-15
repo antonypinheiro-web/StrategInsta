@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight, Star } from "lucide-react";
-import { CREDIT_PACKS, brl, creditsInDeliveries, strategyPriceCents } from "@/lib/credit-packs";
+import { CREDIT_PACKS, brl } from "@/lib/credit-packs";
 import logo from "@/assets/logo.png";
 
 // ─── Dados ────────────────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ const PERSONAS = [
     emoji: "👤",
     title: "Empreendedor",
     description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O StrategInsta faz isso por você em minutos.",
-    cta: "Comece com 30 créditos grátis",
+    cta: "Comece com 30 TPs grátis",
   },
   {
     emoji: "📱",
@@ -54,8 +54,8 @@ const PERSONAS = [
   {
     emoji: "🏢",
     title: "Agência de Marketing",
-    description: "Escale sua produção sem escalar sua equipe. Compre créditos conforme a demanda dos seus clientes.",
-    cta: "Pacote de 150 créditos por R$69",
+    description: "Escale sua produção sem escalar sua equipe. Compre TPs conforme a demanda dos seus clientes.",
+    cta: "Pacote de 150 TPs por R$69",
   },
 ];
 
@@ -102,7 +102,7 @@ const FAQS = [
   },
   {
     question: "Como funciona o plano gratuito?",
-    answer: "O plano gratuito dá acesso a 2 estratégias completas, sem prazo de validade. Não precisa de cartão de crédito para começar.",
+    answer: "Ao criar a conta você recebe 30 TPs, a moeda do app, que não expiram. Não precisa de cartão de crédito para começar.",
   },
   {
     question: "Posso cancelar quando quiser?",
@@ -263,7 +263,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Preços</h2>
-            <p className="text-foreground/60">Sem assinatura. Você compra créditos quando precisar e eles não expiram.</p>
+            <p className="text-foreground/60">Sem assinatura. Você compra TPs quando precisar e eles não expiram.</p>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-6">
@@ -271,7 +271,7 @@ export default function Landing() {
               <h3 className="font-bold text-lg">Primeiro acesso</h3>
               <div className="text-3xl font-extrabold my-3">Grátis</div>
               <ul className="flex-1 space-y-2 mb-6 text-sm">
-                {["30 créditos ao criar a conta", "1 estratégia completa", "10 créditos para ajustes, ideias e roteiros"].map(item => (
+                {["30 TPs ao criar a conta", "Sem cartão de crédito", "Use em qualquer função do app"].map(item => (
                   <li key={item} className="flex items-center gap-2 text-foreground/70"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{item}</li>
                 ))}
               </ul>
@@ -288,10 +288,10 @@ export default function Landing() {
                       Melhor valor
                     </span>
                   )}
-                  <h3 className="font-bold text-lg">{pack.credits} créditos</h3>
+                  <h3 className="font-bold text-lg">{pack.credits} TPs</h3>
                   <div className="text-3xl font-extrabold my-3">{brl(pack.priceCents)}</div>
                   <ul className="flex-1 space-y-2 mb-6 text-sm">
-                    {[creditsInDeliveries(pack.credits), `Estratégia completa sai a ${brl(strategyPriceCents(pack))}`, "Créditos não expiram"].map(item => (
+                    {["TPs não expiram", "Use em qualquer função do app", "Sem assinatura"].map(item => (
                       <li key={item} className="flex items-center gap-2 text-foreground/70"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />{item}</li>
                     ))}
                   </ul>

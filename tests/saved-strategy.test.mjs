@@ -16,8 +16,22 @@ test('reopens saved strategy and restores revision dates for history', () => {
 });
 test('foreign account and malformed saved content are rejected before rendering', () => {
   assert.throws(() => parseSavedStrategy(fixture(), 'other'), /conta/);
+  // A malformed section never reaches the screen, but it no longer blocks the rest of the strategy.
   const row = fixture(); row.generated_strategy.storiesStrategy = [{ unexpected: true }];
-  assert.throws(() => parseSavedStrategy(row, 'owner'), /incompletos/);
+  const parsed = parseSavedStrategy(row, 'owner');
+  assert.equal(parsed.strategy.storiesStrategy, undefined);
+  assert.equal(typeof parsed.strategy.idealCustomerProfile, 'string');
+  const empty = fixture(); empty.generated_strategy = null;
+  assert.throws(() => parseSavedStrategy(empty, 'owner'), /incompletos/);
+});
+test('a strategy saved part-way opens with its workspace (bug of 12/10)', () => {
+  const row = fixture();
+  row.generated_strategy = { idealCustomerProfile: 'Perfil', monetizationIdeas: 'Ideias', businessId: 'b1', generationId: 'g1',
+    pilotWorkspace: { schemaVersion: 1, selectedMonetizationIds: [], scripts: [] } };
+  const parsed = parseSavedStrategy(row, 'owner');
+  assert.deepEqual(Object.keys(parsed.strategy).sort(), ['idealCustomerProfile', 'monetizationIdeas']);
+  assert.equal(parsed.workspace.schemaVersion, 1);
+  assert.equal(parsed.businessId, 'b1');
 });
 test('invalid historical dates do not break the saved strategy', () => {
   const row = fixture(); row.history[0].createdAt = 'invalid-date';
