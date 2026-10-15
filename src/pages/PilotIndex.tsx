@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { History, Pencil, Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -10,6 +10,7 @@ import { AccountViewSwitch } from '@/components/AccountViewSwitch';
 import { SavedStrategiesDialog } from '@/components/SavedStrategiesDialog';
 import { InputDialog } from '@/components/InputDialog';
 import { CreditPacksDialog, CreditWalletSummary } from '@/components/CreditWallet';
+import { AccountMenu } from '@/components/AccountMenu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -225,13 +226,13 @@ export default function PilotIndex() {
     setInput(content.input); setStrategy(content.strategy); setWorkspace(stampEditedVersion(content.workspace, content.source, record.id)); setBusinessId(record.business_id);
     setStrategyId(record.strategy_id); setStrategyName(''); setGenerationId(record.generation_id ?? content.generationId); setPhase('dashboard'); setHistoryOpen(false); setJob(undefined); setViewingVersion(true); setError('');
   };
-  const toolbar = <><Button variant="outline" disabled={busy} onClick={() => setHistoryOpen(true)}><History className="mr-2 h-4 w-4" />Histórico</Button><SavedStrategiesDialog userId={user?.id} currentId={strategyId} onOpen={openSaved} onRenamed={(id, name) => { if (id === strategyId) setStrategyName(name); }} /><AccountViewSwitch current="user" compact /><Button variant="ghost" onClick={() => setDark(value => !value)}>{dark ? 'Tema claro' : 'Tema escuro'}</Button></>;
+  const toolbar = <><SavedStrategiesDialog userId={user?.id} currentId={strategyId} onOpen={openSaved} onRenamed={(id, name) => { if (id === strategyId) setStrategyName(name); }} /><AccountViewSwitch current="user" compact /><AccountMenu email={user?.email} userMetadata={user?.user_metadata} available={wallet?.available} dark={dark} onBuy={() => setPacksOpen(true)} onHistory={() => setHistoryOpen(true)} onToggleTheme={() => setDark(value => !value)} onSignOut={() => void supabase.auth.signOut()} /></>;
   const protectedGenerate = async (op: WorkspaceOperation, payload: WorkspaceGenerationPayload) => { try { return await generateWorkspace(op, payload); } finally { void refreshWallet(); } };
   const totalStories = workspace.storiesAgenda?.days.reduce((total, day) => total + day.requestedCount, 0) ?? 0;
   if (sessionLoading) return <LoadingSpinner message="Verificando sessão..." />;
   return <div className="min-h-screen bg-background text-foreground">
     <CreditPacksDialog open={packsOpen} onOpenChange={setPacksOpen} />
-    {phase !== 'onboarding' && <header className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8"><img src={logo} alt="StrategInsta" className="h-11 w-auto logo-theme-aware" /><div className="flex flex-wrap items-center gap-2">{toolbar}<Button variant="ghost" disabled={busy} onClick={() => void supabase.auth.signOut()}>Sair</Button></div></header>}
+    {phase !== 'onboarding' && <header className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8"><img src={logo} alt="StrategInsta" className="h-11 w-auto logo-theme-aware" /><div className="flex flex-wrap items-center gap-2">{toolbar}</div></header>}
     {phase === 'onboarding' ? <OnboardingWizard key={String(user?.id) + editingInput} userId={user?.id} isAuthenticated={!!user} onStart={start}
       initialValues={input} error={error} toolbar={toolbar} onLogout={() => supabase.auth.signOut().then(() => {})} planLoading={editingInput ? false : walletLoading} planError={editingInput ? null : walletError}
       canGenerate={editingInput || !!wallet && wallet.available >= 20} creditsRemaining={wallet?.available} generationCost={editingInput ? 0 : 20}

@@ -1,6 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { UserInput, GeneratedStrategy } from '@/types';
 import type { PilotWorkspaceData, WorkspaceOperation, WorkspaceGenerationPayload } from '@/types/workspace';
+import { withBrandProfile } from '@/lib/brand-profile';
+
+// Quote and generate carry the same profile so the server sees the same input for both.
+const withProfile = (request: GenerationRequest): GenerationRequest => ({ ...request, input: withBrandProfile(request.input) });
 
 export interface Wallet { balance: number; reserved: number; available: number; allowance?: number; }
 export interface PilotOutput { strategy: Partial<GeneratedStrategy>; workspace: PilotWorkspaceData; }
@@ -56,8 +60,8 @@ export async function invokePilot<T>(action: string, payload: object = {}): Prom
 
 export const pilotService = {
   wallet: () => invokePilot<{ wallet: Wallet }>('wallet'),
-  quote: (request: GenerationRequest) => invokePilot<{ credits: number; wallet: Wallet; availableAfter: number }>('quote', request),
-  generate: (request: GenerationRequest) => invokePilot<GenerationResponse>('generate', request),
+  quote: (request: GenerationRequest) => invokePilot<{ credits: number; wallet: Wallet; availableAfter: number }>('quote', withProfile(request)),
+  generate: (request: GenerationRequest) => invokePilot<GenerationResponse>('generate', withProfile(request)),
   cancel: (generationId: string) => invokePilot<{ wallet: Wallet }>('cancel', { generationId }),
   history: (payload: HistoryRequest = {}) => invokePilot<HistoryResponse>('history', payload),
   saveRevision: (payload: object) => invokePilot<{ revision: RevisionRecord }>('saveRevision', payload),
