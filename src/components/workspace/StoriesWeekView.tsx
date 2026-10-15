@@ -8,8 +8,9 @@ import { FeedbackButton, ManualEditor } from './WorkspaceControls';
 
 const goalLabels = { retain: 'Reter', engage: 'Engajar', convert: 'Converter' };
 const storyFormatLabels = { video: 'Vídeo', photo: 'Foto', text: 'Tela de texto' };
-const dayTab = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }).replace('.', '');
-const dayTitle = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+const upperFirst = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+const dayTab = (value: string) => upperFirst(new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }).replace('.', ''));
+const dayTitle = (value: string) => upperFirst(new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' }));
 const localToday = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
 
 interface StoriesWeekViewProps {
@@ -30,14 +31,14 @@ export function StoriesWeekView({ week, unavailable, onOpenGenerator, onEdit, on
   return <div className="space-y-4">
     <div role="tablist" aria-label="Dias da semana" className="flex gap-2 overflow-x-auto pb-1">
       {week.days.map(item => <button key={item.id} type="button" role="tab" aria-selected={item.id === day.id} onClick={() => { setSelected(item.id); setExpanded(undefined); }}
-        className={`shrink-0 rounded-lg border px-3 py-2 text-left text-sm capitalize transition-colors ${item.id === day.id ? 'border-primary bg-primary/10 font-semibold' : 'hover:bg-muted/40'}`}>
+        className={`shrink-0 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${item.id === day.id ? 'border-primary bg-primary/10 font-semibold' : 'hover:bg-muted/40'}`}>
         <span className="block">{dayTab(item.date)}</span>
-        <span className="block text-xs font-normal text-muted-foreground">{item.stories.length ? `${item.stories.length} stories` : item.requestedCount ? 'a gerar' : 'livre'}</span>
+        <span className="block text-xs font-normal text-muted-foreground">{item.stories.length ? `${item.stories.length} ${item.stories.length === 1 ? 'story' : 'stories'}` : item.requestedCount ? 'a gerar' : 'livre'}</span>
       </button>)}
     </div>
     <article role="tabpanel" className="rounded-xl border p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h4 className="font-semibold capitalize">{dayTitle(day.date)}</h4>
+        <h4 className="font-semibold">{dayTitle(day.date)}</h4>
         {day.stories.length > 0 && <div className="flex flex-wrap gap-2">
           <CopyButton label="Copiar o dia" getText={() => storiesDayToText(day)} />
           <Button size="sm" variant="ghost" disabled={unavailable} onClick={() => onOpenGenerator({ kind: 'day', id: day.id, weekId: week.id, dayId: day.id }, day)}>Ajustar este dia</Button>
