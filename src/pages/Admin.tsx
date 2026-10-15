@@ -7,6 +7,7 @@ import {
   Download,
   FileText,
   LayoutDashboard,
+  MessageSquare,
   Loader2,
   Lock,
   RefreshCw,
@@ -28,6 +29,7 @@ import { adminService } from '@/services/adminService';
 import { AccountViewSwitch } from '@/components/AccountViewSwitch';
 import { AdminModelSettings } from '@/components/AdminModelSettings';
 import { useAskDialog } from '@/components/AskDialog';
+import { AdminFeedbackTable } from '@/components/AdminFeedbackTable';
 import type {
   AdminAuditLogRow,
   AdminOverview,
@@ -52,6 +54,7 @@ const navItems = [
   { id: 'users', label: 'Usuários', icon: Users },
   { id: 'strategies', label: 'Estratégias', icon: FileText },
   { id: 'events', label: 'Eventos', icon: Activity },
+  { id: 'feedback', label: 'Feedbacks', icon: MessageSquare },
   { id: 'logs', label: 'Logs', icon: Shield },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ] as const;
@@ -528,6 +531,7 @@ const Admin: React.FC = () => {
           )}
 
           {activeSection === 'events' && <EventTable events={events} />}
+          {activeSection === 'feedback' && <AdminFeedbackTable emails={Object.fromEntries(users.map(row => [row.id, row.email ?? undefined]))} />}
           {activeSection === 'logs' && <AuditTable logs={logs} />}
           {activeSection === 'settings' && <AdminModelSettings />}
         </main>
