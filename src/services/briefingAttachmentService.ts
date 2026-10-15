@@ -92,7 +92,7 @@ export function createBriefingAttachmentService(businessId: string, userId: stri
         }
         const quote = await pilotService.quote(operation.request);
         onWalletChanged?.(quote.wallet);
-        if (quote.credits !== 0 && quote.credits !== 2) throw new Error(`O custo de leitura mudou para ${quote.credits} créditos. Atualize o app para revisar o novo custo antes de gerar.`);
+        if (quote.credits !== 0 && quote.credits !== 2) throw new Error(`O custo de leitura mudou para ${quote.credits} TPs. Atualize o app para revisar o novo custo antes de gerar.`);
         if (quote.availableAfter < 0) throw new PilotRequestError('INSUFFICIENT_CREDITS');
         signal.throwIfAborted();
         const retry = operation.attempted; operation.attempted = true;

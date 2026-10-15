@@ -30,7 +30,7 @@ export function AccountViewSwitch({ current, compact = false }: { current: 'user
       {!compact && <div>
         <p className="font-medium">{current === 'user' ? 'App do usuário' : 'Área administrativa'}</p>
         <p className="text-xs text-muted-foreground">
-          {current === 'user' ? 'Seu plano e seus créditos continuam valendo normalmente.' : 'Teste o app com seu plano e o mesmo login.'}
+          {current === 'user' ? 'Seu plano e seus TPs continuam valendo normalmente.' : 'Teste o app com seu plano e o mesmo login.'}
         </p>
       </div>}
       <Button asChild variant="outline" size="sm">
