@@ -311,6 +311,14 @@ const Admin: React.FC = () => {
 
   const resetUsage = (row: AdminUserRow) => runCreditAction('resetUsage', row);
 
+  const sendPasswordReset = async (row: AdminUserRow) => {
+    if (!await ask({ title: 'Enviar link de nova senha?', description: `${row.email ?? row.id} vai receber um e-mail com um link para criar uma nova senha. A senha atual continua valendo até ela trocar.`, confirmLabel: 'Enviar e-mail' })) return;
+    try {
+      const result = await adminService.sendPasswordReset({ userId: row.id });
+      toast.success(`Link enviado para ${result.email}. Peça para conferir também a caixa de spam.`);
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o link.'); }
+  };
+
   const saveNotes = async (row: AdminUserRow) => {
     const answer = await ask({ title: 'Observação interna', description: row.email ?? row.id, fields: [{ name: 'notes', label: 'Observação', type: 'textarea', defaultValue: row.adminNotes ?? '' }], confirmLabel: 'Salvar' });
     if (!answer) return;
@@ -497,6 +505,7 @@ const Admin: React.FC = () => {
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy || !!pendingCredits[`resetUsage:${row.id}`]} onClick={() => grantCredits(row)}>{creditBusy === `grantCredits:${row.id}` && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}{pendingCredits[`grantCredits:${row.id}`] ? 'Retomar TP' : 'TPs'}</Button>
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy || !!pendingCredits[`grantCredits:${row.id}`]} onClick={() => resetUsage(row)}>{creditBusy === `resetUsage:${row.id}` && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}{pendingCredits[`resetUsage:${row.id}`] ? 'Retomar reset' : 'Reset'}</Button>
                           <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy} onClick={() => saveNotes(row)}>Nota</Button>
+                          <Button size="sm" variant="outline" disabled={isLoading || !!creditBusy} onClick={() => void sendPasswordReset(row)}>Link de nova senha</Button>
                           <Button size="sm" disabled={isLoading || !!creditBusy} variant={row.isBlocked ? 'outline' : 'destructive'} onClick={() => blockUser(row)}>{row.isBlocked ? 'Desbloquear' : 'Bloquear'}</Button>
                         </td>
                       </tr>

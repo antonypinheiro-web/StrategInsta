@@ -4,11 +4,11 @@ import type { GeneratedStrategy, HistoryItem, UserInput } from '../types';
 const stories = z.array(z.object({ dayOfWeek: z.string(), objective: z.string(), contentType: z.string(), example: z.string(), tips: z.string() }));
 const contentItems = z.array(z.object({ type: z.string(), description: z.string(), example: z.string(), frequency: z.string() }));
 const contentTable = z.object({ topOfFunnel: contentItems, middleOfFunnel: contentItems, bottomOfFunnel: contentItems });
-const calendar = z.array(z.object({ day: z.number(), weekday: z.string(), contentType: z.string(), topic: z.string(), caption: z.string(), hashtags: z.array(z.string()), stories: z.array(z.string()).optional() }));
-const actionPlan = z.array(z.object({ week: z.number(), tasks: z.array(z.object({ task: z.string(), description: z.string(), priority: z.enum(['high', 'medium', 'low']), completed: z.boolean().optional() })) }));
+export const calendarSchema = z.array(z.object({ day: z.number(), weekday: z.string(), contentType: z.string(), topic: z.string(), caption: z.string(), hashtags: z.array(z.string()), stories: z.array(z.string()).optional() }));
+export const actionPlanSchema = z.array(z.object({ week: z.number(), tasks: z.array(z.object({ task: z.string(), description: z.string(), priority: z.enum(['high', 'medium', 'low']), completed: z.boolean().optional() })) }));
 // Strategies can be saved part-way (e.g. only the profile, monetization and the workspace), so every section is optional.
-const strategySchema = z.object({ idealCustomerProfile: z.string(), monetizationIdeas: z.string(), instagramBio: z.string(), storiesStrategy: stories, contentTable, editorialCalendar: calendar, actionPlan }).partial();
-const historyItemSchema = z.object({ id: z.string(), title: z.string(), type: z.enum(['idealCustomerProfile', 'monetizationIdeas', 'instagramBio', 'storiesStrategy', 'contentTable', 'editorialCalendar', 'actionPlan', 'contentGenerator']), content: z.union([z.string(), stories, contentTable, calendar, actionPlan]), createdAt: z.coerce.date(), prompt: z.string().optional() });
+const strategySchema = z.object({ idealCustomerProfile: z.string(), monetizationIdeas: z.string(), instagramBio: z.string(), storiesStrategy: stories, contentTable, editorialCalendar: calendarSchema, actionPlan: actionPlanSchema }).partial();
+const historyItemSchema = z.object({ id: z.string(), title: z.string(), type: z.enum(['idealCustomerProfile', 'monetizationIdeas', 'instagramBio', 'storiesStrategy', 'contentTable', 'editorialCalendar', 'actionPlan', 'contentGenerator']), content: z.union([z.string(), stories, contentTable, calendarSchema, actionPlanSchema]), createdAt: z.coerce.date(), prompt: z.string().optional() });
 
 export interface SavedStrategy {
   id: string;

@@ -4,7 +4,7 @@ import type { GeneratedContent } from '@/types/workspace';
 import { FORMAT_NAMES } from '@/lib/content-text';
 import { calendarFormat } from './workspace-model';
 import { CopyButton } from './CopyButton';
-import { ManualEditor } from './WorkspaceControls';
+import { CostButton, ManualEditor } from './WorkspaceControls';
 
 const dayText = (day: CalendarDay) => [`Dia ${day.day} (${day.weekday})`, `Formato: ${formatName(day.contentType)}`, `Ideia: ${day.topic}`, day.caption && `Legenda: ${day.caption}`, day.hashtags?.length ? day.hashtags.join(' ') : ''].filter(Boolean).join('\n');
 const formatName = (value: string) => { const format = calendarFormat(value); return format ? FORMAT_NAMES[format] : value; };
@@ -13,11 +13,13 @@ interface CalendarPanelProps {
   calendar: CalendarDay[]; scripts: GeneratedContent[]; busy?: boolean;
   onCreate: (day: CalendarDay) => void;
   onSaveDay: (day: CalendarDay, values: Record<string, string>) => Promise<void>;
+  /** Generates the calendar alone, for strategies saved before the final stage. */
+  onGenerate?: () => Promise<unknown>;
 }
 
 /** 30 days in compact rows grouped by week: format, idea, production status and actions on the row itself. */
-export function CalendarPanel({ calendar, scripts, busy, onCreate, onSaveDay }: CalendarPanelProps) {
-  if (!calendar.length) return <p className="rounded-xl border p-5 text-sm text-muted-foreground">O calendário de 30 dias é gerado junto com a estratégia completa.</p>;
+export function CalendarPanel({ calendar, scripts, busy, onCreate, onSaveDay, onGenerate }: CalendarPanelProps) {
+  if (!calendar.length) return <div className="space-y-3 rounded-xl border p-5"><p className="text-sm text-muted-foreground">Esta estratégia ainda não tem o calendário de 30 dias. Ele usa o seu briefing, a matriz e as oportunidades escolhidas.</p>{onGenerate && <CostButton credits={5} busy={busy} onClick={() => { void onGenerate().catch(() => undefined); }}>Gerar calendário de 30 dias</CostButton>}</div>;
   const weeks = Array.from({ length: Math.ceil(calendar.length / 7) }, (_, index) => calendar.filter(day => Math.ceil(day.day / 7) === index + 1));
   const contentFor = (day: CalendarDay) => [...scripts].reverse().find(script => script.origin.kind === 'calendar' && script.origin.id === `calendar-day-${day.day}`);
   return <section className="space-y-5" aria-label="Calendário de 30 dias">
