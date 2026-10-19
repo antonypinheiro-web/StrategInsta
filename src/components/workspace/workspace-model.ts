@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { awarenessLevels, contentPurposes } from '../../types/workspace.ts';
+import { actionPlanSchema, calendarSchema } from '../../lib/saved-strategy.ts';
 import type { ContentFormat, PilotWorkspaceData, WorkspaceOperation, WorkspaceGenerationPayload, WorkspaceGenerationResult, StoriesDay, StoriesWeek, ContentOrigin, ContentIdea, ContentMatrix, StoryFrame, MonetizationAnalysis, BioOption, GeneratedContent } from '../../types/workspace.ts';
 
 const text = z.string().trim().min(1).max(12000);
@@ -83,7 +84,8 @@ export function applyWorkspaceResult(data: PilotWorkspaceData, operation: Worksp
     return replaceWorkspaceItem(data, payload.origin, parsedOutput, result.versionId);
   } else if (operation === 'section_regenerate') {
     if (!payload.section) throw new Error('Escolha a seção a atualizar.');
-    const content = text.max(40000).parse(parsedOutput);
+    // Calendar and action plan come back as lists; the other sections are text.
+    const content = payload.section === 'editorialCalendar' ? calendarSchema.parse(parsedOutput) : payload.section === 'actionPlan' ? actionPlanSchema.parse(parsedOutput) : text.max(40000).parse(parsedOutput);
     next.overrides = { ...data.overrides, [payload.section]: content };
     next.staleSections = (data.staleSections ?? []).filter(section => section !== payload.section);
   }

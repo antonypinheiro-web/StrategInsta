@@ -1,16 +1,18 @@
 import type { ActionPlanItem } from '@/types';
-import { ManualEditor } from './WorkspaceControls';
+import { CostButton, ManualEditor } from './WorkspaceControls';
 
 const PRIORITY = { high: { label: 'Alta', className: 'bg-red-500/10 text-red-600 dark:text-red-400' }, medium: { label: 'Média', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' }, low: { label: 'Baixa', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' } } as const;
 
 interface ActionPlanPanelProps {
   plan: ActionPlanItem[]; busy?: boolean;
   onSaveTask: (week: number, index: number, values: Record<string, string | boolean>) => Promise<void>;
+  /** Generates the plan alone, for strategies saved before the final stage. */
+  onGenerate?: () => Promise<unknown>;
 }
 
 /** Weekly tasks with edit and "done" on the task itself. */
-export function ActionPlanPanel({ plan, busy, onSaveTask }: ActionPlanPanelProps) {
-  if (!plan.length) return <p className="rounded-xl border p-5 text-sm text-muted-foreground">O plano de ação é gerado junto com a estratégia completa.</p>;
+export function ActionPlanPanel({ plan, busy, onSaveTask, onGenerate }: ActionPlanPanelProps) {
+  if (!plan.length) return <div className="space-y-3 rounded-xl border p-5"><p className="text-sm text-muted-foreground">Esta estratégia ainda não tem o plano de ação de 4 semanas.</p>{onGenerate && <CostButton credits={3} busy={busy} onClick={() => { void onGenerate().catch(() => undefined); }}>Gerar plano de ação</CostButton>}</div>;
   const total = plan.reduce((sum, week) => sum + week.tasks.length, 0);
   const done = plan.reduce((sum, week) => sum + week.tasks.filter(task => task.completed).length, 0);
   return <section className="space-y-5" aria-label="Plano de ação">

@@ -12,16 +12,23 @@ export async function invokeAdmin<T>(action: string, payload: Record<string, unk
 
   if (error) {
     let code = 'SERVICE_UNAVAILABLE';
+    let message: string | undefined;
     if ('context' in error && error.context instanceof Response) {
-      try { const body = await error.context.json(); if (typeof body.code === 'string') code = body.code; } catch { /* Safe category only. */ }
+      try {
+        const body = await error.context.json();
+        if (typeof body.code === 'string') code = body.code;
+        // The server only puts safe, user-facing text in `error` (e.g. "Este e-mail já tem conta").
+        if (typeof body.error === 'string' && body.error.trim()) message = body.error;
+      } catch { /* Safe category only. */ }
     }
-    throw new Error(`Não foi possível concluir a ação (${code}).`);
+    throw new Error(message ? `${message}${code !== 'SERVICE_UNAVAILABLE' ? ` (${code})` : ''}` : `Não foi possível concluir a ação (${code}).`);
   }
   if (data?.error) throw new Error(data.error);
   return data as T;
 }
 
 export const adminService = {
+  sendPasswordReset: (payload: { userId: string }) => invokeAdmin<{ sent: boolean; email: string }>('sendPasswordReset', payload),
   me: () => invokeAdmin<{ admin: { user_id: string; email: string; role: string; active: boolean } }>('me'),
   overview: (range: AdminRange) => invokeAdmin<AdminOverview>('overview', { range }),
   listUsers: (payload: { search?: string; page?: number; perPage?: number }) =>

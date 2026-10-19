@@ -34,7 +34,8 @@ type AdminAction =
   | 'testAiModel'
   | 'applyAiConfig'
   | 'rollbackAiConfig'
-  | 'updateAdminNotes';
+  | 'updateAdminNotes'
+  | 'sendPasswordReset';
 
 interface AdminRequestBody {
   action: AdminAction;
@@ -236,6 +237,23 @@ async function overview(supabase: ReturnType<typeof createAdminClient>, adminUse
   };
 }
 
+// Errors whose message is safe and useful to show in the admin panel.
+class AdminUserError extends Error {
+  constructor(message: string, readonly status = 400) { super(message); this.name = 'AdminUserError'; }
+}
+
+// Sends the standard recovery email; the link opens /login on the "Criar nova senha" step.
+async function sendPasswordReset(supabase: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
+  const userId = String(payload.userId ?? '');
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new AdminUserError('Usuário inválido.');
+  const { data, error } = await supabase.auth.admin.getUserById(userId);
+  if (error || !data.user?.email) throw new AdminUserError('Usuário sem e-mail cadastrado.', 404);
+  const origin = (Deno.env.get('APP_ALLOWED_ORIGINS') ?? 'https://strateginsta.vercel.app').split(',')[0].trim();
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.user.email, { redirectTo: `${origin}/login` });
+  if (resetError) throw new AdminUserError('Não foi possível enviar o e-mail agora. Tente novamente em alguns minutos.', 502);
+  return { sent: true, email: data.user.email };
+}
+
 async function createUser(supabase: ReturnType<typeof createAdminClient>, payload: Record<string, unknown>) {
   const email = String(payload.email ?? '').trim();
   const password = String(payload.password ?? '').trim();
@@ -248,6 +266,9 @@ async function createUser(supabase: ReturnType<typeof createAdminClient>, payloa
     email_confirm: true,
     user_metadata: { created_from_admin: true },
   });
+  if (error && (error.code === 'email_exists' || /already been registered/i.test(error.message))) {
+    throw new AdminUserError('Este e-mail já tem conta. Para ajudar no acesso, use "Enviar link de nova senha" na lista de usuários.', 409);
+  }
   if (error) throw error;
 
   await supabase.from('user_plans').upsert({
@@ -534,6 +555,10 @@ serve(async (req) => {
       case 'rollbackAiConfig':
         result = await applyAiConfig(supabase, user.id, payload, true);
         break;
+      case 'sendPasswordReset':
+        result = await sendPasswordReset(supabase, payload);
+        await logAdminAction(supabase, user.id, action, { targetType: 'user', targetUserId: payload.userId });
+        break;
       default:
         throw new Error('Acao admin invalida');
     }
@@ -542,6 +567,7 @@ serve(async (req) => {
   } catch (err) {
     console.error('[admin-api]', err instanceof PilotError ? err.code : 'ADMIN_REQUEST_FAILED');
     if (err instanceof AccessDeniedError) return json({ error: err.message }, 403);
+    if (err instanceof AdminUserError) return json({ error: err.message }, err.status);
     if (err instanceof PilotError) return json({ error: 'Não foi possível concluir a operação administrativa.', code: err.code }, err.status);
     return json({ error: 'Nao foi possivel concluir a operacao administrativa.' }, 500);
   }
