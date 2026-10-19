@@ -28,6 +28,8 @@ export async function invokeAdmin<T>(action: string, payload: Record<string, unk
 }
 
 export const adminService = {
+  grantCreditsAll: (payload: { amount: number; reason: string; dryRun?: boolean; idempotencyKey?: string }) =>
+    invokeAdmin<{ users: number; total: number; blocked?: number }>('grantCreditsAll', payload),
   sendPasswordReset: (payload: { userId: string }) => invokeAdmin<{ sent: boolean; email: string }>('sendPasswordReset', payload),
   me: () => invokeAdmin<{ admin: { user_id: string; email: string; role: string; active: boolean } }>('me'),
   overview: (range: AdminRange) => invokeAdmin<AdminOverview>('overview', { range }),

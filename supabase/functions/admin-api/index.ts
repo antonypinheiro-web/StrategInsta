@@ -35,7 +35,8 @@ type AdminAction =
   | 'applyAiConfig'
   | 'rollbackAiConfig'
   | 'updateAdminNotes'
-  | 'sendPasswordReset';
+  | 'sendPasswordReset'
+  | 'grantCreditsAll';
 
 interface AdminRequestBody {
   action: AdminAction;
@@ -293,6 +294,37 @@ async function setPlan(supabase: ReturnType<typeof createAdminClient>, payload: 
   }, { onConflict: 'user_id' });
   if (error) throw error;
   return { ok: true };
+}
+
+// Adds the same amount to every user that is not blocked. dryRun only counts them, so the panel can
+// confirm the exact number before sending. Each user gets its own ledger reference: a retry never doubles.
+async function grantCreditsAll(supabase: ReturnType<typeof createAdminClient>, adminUserId: string, payload: Record<string, unknown>) {
+  const amount = toInt(payload.amount, 0);
+  if (amount <= 0 || amount > 1000) throw new AdminUserError('Informe de 1 a 1.000 TPs por usuário.');
+  const reason = String(payload.reason ?? 'Recarga para todos (admin)').slice(0, 500);
+  const ids: string[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+    if (error) throw error;
+    ids.push(...(data.users ?? []).map(user => user.id));
+    if ((data.users ?? []).length < 100) break;
+  }
+  const { data: blocked, error: blockedError } = await supabase.from('user_plans').select('user_id').eq('is_blocked', true);
+  if (blockedError) throw blockedError;
+  const blockedIds = new Set((blocked ?? []).map(row => row.user_id as string));
+  const targets = ids.filter(id => !blockedIds.has(id));
+  if (payload.dryRun === true) return { users: targets.length, total: targets.length * amount, blocked: blockedIds.size };
+  const key = uuid(payload.idempotencyKey);
+  let granted = 0;
+  for (const userId of targets) {
+    const { error } = await supabase.rpc('pilot_admin_credits', {
+      p_admin: adminUserId, p_user: userId, p_amount: amount,
+      p_reference: `admin-grant-all:${key}:${userId}`, p_reason: reason, p_reset: false,
+    });
+    if (error) throw new AdminUserError(`Recarga interrompida depois de ${granted} usuários. Use o mesmo botão de novo: quem já recebeu não recebe duas vezes.`, 500);
+    granted++;
+  }
+  return { users: granted, total: granted * amount };
 }
 
 async function grantCredits(supabase: ReturnType<typeof createAdminClient>, adminUserId: string, payload: Record<string, unknown>) {
@@ -554,6 +586,10 @@ serve(async (req) => {
         break;
       case 'rollbackAiConfig':
         result = await applyAiConfig(supabase, user.id, payload, true);
+        break;
+      case 'grantCreditsAll':
+        result = await grantCreditsAll(supabase, user.id, payload);
+        if (payload.dryRun !== true) await logAdminAction(supabase, user.id, action, { targetType: 'credit_grant', amount: payload.amount, scope: 'all' });
         break;
       case 'sendPasswordReset':
         result = await sendPasswordReset(supabase, payload);
