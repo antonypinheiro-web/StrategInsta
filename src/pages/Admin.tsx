@@ -266,6 +266,7 @@ const Admin: React.FC = () => {
           if (!answer) return;
           const amount = Number(answer.amount);
           if (!Number.isSafeInteger(amount) || amount <= 0) { toast.warning('Informe uma quantidade inteira maior que zero.'); return; }
+          if (!await ask({ title: 'Confirmar adição de TPs', description: `Adicionar ${amount.toLocaleString('pt-BR')} TPs para ${row.email ?? row.id}? Fica registrado no extrato e não pode ser desfeito pelo painel.`, confirmLabel: `Confirmar ${amount.toLocaleString('pt-BR')} TPs` })) return;
           attempt = { action, payload: { userId: row.id, amount, reason: answer.reason.trim() || 'Recarga manual admin' }, key: crypto.randomUUID() };
         } else {
           if (!await ask({ title: 'Restaurar saldo do piloto', description: `Restaurar o saldo de IA de ${row.email ?? row.id} para 30 TPs? Isso substitui o saldo atual e fica registrado no extrato.`, confirmLabel: 'Restaurar saldo', destructive: true })) return;
@@ -310,6 +311,30 @@ const Admin: React.FC = () => {
   };
 
   const resetUsage = (row: AdminUserRow) => runCreditAction('resetUsage', row);
+
+  // Kept until the bulk grant succeeds, so a retry reuses it and nobody is credited twice.
+  const bulkKey = useRef<{ key: string; amount: number }>();
+  const grantAll = async () => {
+    const answer = await ask({ title: 'Adicionar TPs para todos', fields: [
+      { name: 'amount', label: 'TPs para cada usuário', type: 'number', defaultValue: '30' },
+      { name: 'reason', label: 'Motivo (fica no extrato de cada um)', defaultValue: 'Recarga para todos (admin)' },
+    ], confirmLabel: 'Ver quantas pessoas recebem' });
+    if (!answer) return;
+    const amount = Number(answer.amount);
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 1000) { toast.warning('Informe de 1 a 1.000 TPs por usuário.'); return; }
+    const reason = answer.reason.trim() || 'Recarga para todos (admin)';
+    try {
+      const preview = await adminService.grantCreditsAll({ amount, reason, dryRun: true });
+      if (!await ask({ title: 'Confirmar adição para todos', description: `Adicionar ${amount.toLocaleString('pt-BR')} TPs para cada um dos ${preview.users} usuários${preview.blocked ? ` (${preview.blocked} bloqueados ficam de fora)` : ''}, total de ${preview.total.toLocaleString('pt-BR')} TPs? Fica registrado no extrato de cada um e não pode ser desfeito pelo painel.`, confirmLabel: `Confirmar para ${preview.users} usuários`, destructive: true })) return;
+      setCreditBusy('grantAll');
+      if (bulkKey.current?.amount !== amount) bulkKey.current = { key: crypto.randomUUID(), amount };
+      const result = await adminService.grantCreditsAll({ amount, reason, idempotencyKey: bulkKey.current.key });
+      bulkKey.current = undefined;
+      toast.success(`${result.total.toLocaleString('pt-BR')} TPs adicionados para ${result.users} usuários.`);
+      await refreshUsers();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível concluir a recarga.'); }
+    finally { setCreditBusy(null); }
+  };
 
   const sendPasswordReset = async (row: AdminUserRow) => {
     if (!await ask({ title: 'Enviar link de nova senha?', description: `${row.email ?? row.id} vai receber um e-mail com um link para criar uma nova senha. A senha atual continua valendo até ela trocar.`, confirmLabel: 'Enviar e-mail' })) return;
@@ -469,6 +494,12 @@ const Admin: React.FC = () => {
 
           {activeSection === 'users' && (
             <section className="space-y-4">
+              <Card className="rounded-lg">
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-6">
+                  <div><p className="text-sm font-medium">Adicionar TPs para todos</p><p className="text-xs text-muted-foreground">Mesma quantidade para cada usuário não bloqueado. Você confirma o número de pessoas antes de enviar.</p></div>
+                  <Button variant="outline" disabled={isLoading || !!creditBusy} onClick={() => void grantAll()}>Adicionar para todos</Button>
+                </CardContent>
+              </Card>
               <Card className="rounded-lg">
                 <CardHeader><CardTitle className="flex items-center gap-2 text-base"><UserPlus className="h-4 w-4" /> Criar usuário</CardTitle></CardHeader>
                 <CardContent className="grid gap-3 md:grid-cols-[1fr_180px_160px_auto]">
