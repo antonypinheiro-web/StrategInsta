@@ -393,7 +393,7 @@ const Admin: React.FC = () => {
           <div className="mb-6 flex items-center gap-2 px-2">
             <Shield className="h-6 w-6 text-primary" />
             <div>
-              <p className="font-bold">StrategInsta Admin</p>
+              <p className="font-bold">ThinkPost Admin</p>
               <p className="text-xs text-muted-foreground">Operação do SaaS</p>
             </div>
           </div>

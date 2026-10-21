@@ -232,7 +232,7 @@ export default function PilotIndex() {
   if (sessionLoading) return <LoadingSpinner message="Verificando sessão..." />;
   return <div className="min-h-screen bg-background text-foreground">
     <CreditPacksDialog open={packsOpen} onOpenChange={setPacksOpen} />
-    {phase !== 'onboarding' && <header className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8"><img src={logo} alt="StrategInsta" className="h-11 w-auto logo-theme-aware" /><div className="flex flex-wrap items-center gap-2">{toolbar}</div></header>}
+    {phase !== 'onboarding' && <header className="mx-auto flex max-w-screen-2xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8"><img src={logo} alt="ThinkPost" className="h-11 w-auto logo-theme-aware" /><div className="flex flex-wrap items-center gap-2">{toolbar}</div></header>}
     {phase === 'onboarding' ? <OnboardingWizard key={String(user?.id) + editingInput} userId={user?.id} isAuthenticated={!!user} onStart={start}
       initialValues={input} error={error} toolbar={toolbar} onLogout={() => supabase.auth.signOut().then(() => {})} planLoading={editingInput ? false : walletLoading} planError={editingInput ? null : walletError}
       canGenerate={editingInput || !!wallet && wallet.available >= 20} creditsRemaining={wallet?.available} generationCost={editingInput ? 0 : 20}
