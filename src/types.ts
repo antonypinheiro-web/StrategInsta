@@ -1,4 +1,4 @@
-// Types for the StrategInsta application
+// Types for the ThinkPost application
 
 export type ProficiencyLevel = 'iniciante' | 'intermediario' | 'avancado';
 export type PostingFrequency = 'diariamente' | '3x_semana' | '2x_semana' | '1x_semana' | 'personalizado';
