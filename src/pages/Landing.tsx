@@ -74,15 +74,15 @@ const FAQS = [
   },
   {
     question: "Posso usar para mais de um perfil do Instagram?",
-    answer: "Sim. Os planos Professional e Agency permitem criar estratégias para múltiplos perfis/clientes. Cada estratégia gerada fica salva no seu histórico.",
+    answer: "Sim. Você pode criar uma estratégia para cada perfil usando seus TPs, e todas ficam salvas no seu histórico.",
   },
   {
-    question: "Como funciona o plano gratuito?",
-    answer: "Ao criar a conta você recebe 30 TPs, a moeda do app, que não expiram. Não precisa de cartão de crédito para começar.",
+    question: "Preciso pagar para começar?",
+    answer: "Não. Ao criar a conta você recebe 30 TPs, a moeda do app, que não expiram. Não precisa de cartão de crédito para começar.",
   },
   {
-    question: "Posso cancelar quando quiser?",
-    answer: "Sim. Todos os planos pagos podem ser cancelados a qualquer momento, sem multa ou taxa de cancelamento.",
+    question: "Tem mensalidade? Os TPs expiram?",
+    answer: "Não tem mensalidade nem assinatura para cancelar. Você compra um pacote de TPs quando precisar, e eles não expiram.",
   },
 ];
 
@@ -118,7 +118,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center relative">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-sm font-medium mb-6 border border-purple-500/20">
             <Sparkles className="w-3.5 h-3.5" />
-            Powered by Gemini AI + ChatGPT
+            Estratégia de Instagram com inteligência artificial
           </span>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight mb-6">
