@@ -1,9 +1,14 @@
 // "Novidades" in the account menu. Newest first; plain language for users, one entry per release.
 export interface ChangelogEntry { version: string; date: string; items: string[] }
 
-export const APP_VERSION = '0.7.0';
+export const APP_VERSION = '0.8.0';
 
 export const CHANGELOG: ChangelogEntry[] = [
+  { version: '0.8.0', date: '2026-10-20', items: [
+    'O app agora se chama ThinkPost, com logo e ícone novos.',
+    'Ao planejar Stories, você escolhe o dia de início da semana.',
+    'O painel pede confirmação antes de adicionar TPs.',
+  ] },
   { version: '0.7.0', date: '2026-10-16', items: [
     'Menu da conta: saldo, compra de TPs, uso, personalização da empresa, novidades, ajuda e envio de feedback.',
     'Personalização da empresa: tom de voz, palavras a usar e a evitar e uso de emojis valem para todas as gerações.',

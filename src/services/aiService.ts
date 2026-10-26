@@ -1,5 +1,5 @@
 /**
- * StrategInsta — AI Service
+ * ThinkPost — AI Service
  * Chama a Edge Function `call-ai` (server-side) — chaves nunca expostas no frontend.
  * Fallback Gemini → OpenAI é feito no servidor.
  */

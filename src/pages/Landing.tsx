@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight, Star } from "lucide-react";
+import { Check, Zap, Instagram, Sparkles, Target, Calendar, TrendingUp, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
 import { CREDIT_PACKS, brl } from "@/lib/credit-packs";
 import logo from "@/assets/logo.png";
 
@@ -41,7 +41,7 @@ const PERSONAS = [
   {
     emoji: "👤",
     title: "Empreendedor",
-    description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O StrategInsta faz isso por você em minutos.",
+    description: "Você tem um negócio incrível mas não tem tempo para planejar o Instagram. O ThinkPost faz isso por você em minutos.",
     cta: "Comece com 30 TPs grátis",
   },
   {
@@ -56,30 +56,6 @@ const PERSONAS = [
     title: "Agência de Marketing",
     description: "Escale sua produção sem escalar sua equipe. Compre TPs conforme a demanda dos seus clientes.",
     cta: "Pacote de 150 TPs por R$69",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Carla Mendes",
-    role: "Confeiteira artesanal",
-    avatar: "CM",
-    text: "Eu gastava horas pensando no que postar e mesmo assim não tinha resultados. Com o StrategInsta, recebi um calendário completo de 30 dias em 3 minutos. Meu engajamento aumentou 40% no primeiro mês.",
-    stars: 5,
-  },
-  {
-    name: "Rafael Torres",
-    role: "Social Media Manager",
-    avatar: "RT",
-    text: "Gerencio 8 clientes e o StrategInsta virou essencial. O que antes levava um dia inteiro de trabalho agora faço em 20 minutos. A qualidade das estratégias é impressionante — os clientes adoram.",
-    stars: 5,
-  },
-  {
-    name: "Ana Lucia Ferreira",
-    role: "Coach de Carreira",
-    avatar: "AL",
-    text: "O diferencial é a personalização. Não é conteúdo genérico — é uma estratégia que entende o meu nicho, meu tom de voz e meus objetivos. Parece que foi feito por um estrategista humano.",
-    stars: 5,
   },
 ];
 
@@ -98,15 +74,15 @@ const FAQS = [
   },
   {
     question: "Posso usar para mais de um perfil do Instagram?",
-    answer: "Sim. Os planos Professional e Agency permitem criar estratégias para múltiplos perfis/clientes. Cada estratégia gerada fica salva no seu histórico.",
+    answer: "Sim. Você pode criar uma estratégia para cada perfil usando seus TPs, e todas ficam salvas no seu histórico.",
   },
   {
-    question: "Como funciona o plano gratuito?",
-    answer: "Ao criar a conta você recebe 30 TPs, a moeda do app, que não expiram. Não precisa de cartão de crédito para começar.",
+    question: "Preciso pagar para começar?",
+    answer: "Não. Ao criar a conta você recebe 30 TPs, a moeda do app, que não expiram. Não precisa de cartão de crédito para começar.",
   },
   {
-    question: "Posso cancelar quando quiser?",
-    answer: "Sim. Todos os planos pagos podem ser cancelados a qualquer momento, sem multa ou taxa de cancelamento.",
+    question: "Tem mensalidade? Os TPs expiram?",
+    answer: "Não tem mensalidade nem assinatura para cancelar. Você compra um pacote de TPs quando precisar, e eles não expiram.",
   },
 ];
 
@@ -124,7 +100,7 @@ export default function Landing() {
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <img src={logo} alt="StrategInsta" className="h-8 w-auto logo-theme-aware" />
+          <img src={logo} alt="ThinkPost" className="h-8 w-auto logo-theme-aware" />
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={goToApp}>Entrar</Button>
             <Button size="sm" variant="gradient" onClick={goToApp}>
@@ -142,7 +118,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center relative">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-sm font-medium mb-6 border border-purple-500/20">
             <Sparkles className="w-3.5 h-3.5" />
-            Powered by Gemini AI + ChatGPT
+            Estratégia de Instagram com inteligência artificial
           </span>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight mb-6">
@@ -154,7 +130,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-lg md:text-xl text-foreground/60 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Para de perder horas tentando planejar o que postar. A IA do StrategInsta analisa
+            Para de perder horas tentando planejar o que postar. A IA do ThinkPost analisa
             o seu negócio e entrega um plano de conteúdo completo, personalizado e pronto para executar.
           </p>
 
@@ -240,7 +216,7 @@ export default function Landing() {
       <section className="py-20 px-6 bg-muted/40">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para quem é o StrategInsta?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para quem é o ThinkPost?</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -304,37 +280,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Depoimentos ────────────────────────────────────────────────────── */}
-      <section className="py-20 px-6 bg-muted/40">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">O que dizem nossos usuários</h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-4">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: t.stars }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-foreground/70 leading-relaxed flex-1">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{t.name}</p>
-                    <p className="text-xs text-foreground/50">{t.role}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── FAQ ────────────────────────────────────────────────────────────── */}
       <section className="py-20 px-6">
         <div className="max-w-2xl mx-auto">
@@ -387,14 +332,15 @@ export default function Landing() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-border py-10 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="StrategInsta" className="h-7 w-auto logo-theme-aware" />
+          <img src={logo} alt="ThinkPost" className="h-7 w-auto logo-theme-aware" />
           <p className="text-sm text-foreground/40 text-center">
             Desenvolvido por{" "}
             <a href="https://www.instagram.com/antonypinheiro.eu" target="_blank" rel="noopener noreferrer"
               className="text-primary hover:underline">
               Antony Pinheiro
             </a>{" "}
-            · © {new Date().getFullYear()} StrategInsta
+            · © {new Date().getFullYear()} ThinkPost
+            <br />CNPJ 41.965.425/0001-12
           </p>
           <div className="flex gap-4 text-sm text-foreground/40">
             <button onClick={goToApp} className="hover:text-foreground transition-colors">Entrar</button>

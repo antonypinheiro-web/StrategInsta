@@ -25,7 +25,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             {/* Substituindo o h1 pelo img da logo */}
             <img
               src={logo}
-              alt="StrategInsta Logo"
+              alt="ThinkPost Logo"
               className="h-12 sm:h-16 md:h-20 lg:h-24 w-auto mx-auto mb-6 logo-theme-aware"
             />
             
@@ -79,7 +79,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             <div className="absolute inset-0 bg-gradient-hero opacity-20 rounded-2xl blur-3xl"></div>
             <img 
               src={heroImage}
-              alt="StrategInsta AI-powered Instagram content strategy illustration"
+              alt="ThinkPost AI-powered Instagram content strategy illustration"
               className="relative w-full max-w-4xl mx-auto rounded-2xl shadow-strong"
             />
           </div>

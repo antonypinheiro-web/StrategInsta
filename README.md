@@ -1,4 +1,4 @@
-# StrategInsta
+# ThinkPost
 
 Aplicacao de planejamento estrategico de Instagram. Primeiro piloto: empreendedores
 planejando para o proprio negocio.
@@ -68,7 +68,7 @@ revisao de seguranca em producao. Pendencias e limites estao no HANDOFF e nas st
 
 ## Identidade e favicon
 
-`public/favicon.svg` e a fonte do icone SI com o gradiente original.
+`public/favicon.svg` e a fonte do icone TP com o gradiente original.
 `public/favicon.png` e `public/favicon.ico` sao versoes rasterizadas do mesmo icone.
 Todos os HTMLs declaram explicitamente o favicon com uma versao de cache.
 
