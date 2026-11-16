@@ -2,7 +2,7 @@
 
 Versão 1.1 (proposta) • 11/10/2026 • Autor: Claude Code, para aprovação de Antony
 Status: **aprovado por Antony em 11/10/2026** (decisões na seção 10). Camada de regras da plataforma publicada em 11/10/2026
-(`call-ai` v11). Camada do método implementada na v0.9.0 (17/11/2026): `knowledge/metodo.ts`, fase e gargalo internos
+(`call-ai` v11). Camada do método implementada na v0.9.0 (16/11/2026): `knowledge/metodo.ts`, fase e gargalo internos
 devolvidos na etapa do perfil de cliente, matriz 5×5 em etapa própria (`contentMatrix`), campo `directAutomation` no briefing.
 Pendente: avaliação cega da seção 9.
 
