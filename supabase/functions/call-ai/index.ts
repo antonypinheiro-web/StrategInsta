@@ -132,15 +132,24 @@ async function generate(db:Database,user:string,p:JsonObject){
   let generation=object(await rpc(db,'pilot_reserve_generation',{p_user:user,p_request:{operation,input,businessId,idempotencyKey,strategyId:p.strategyId??null,parentGenerationId:p.parentGenerationId??null,inputHash,parameters,retry:p.retry===true}}));
   if(generation.status==='completed')return {generation:withVersion(generation,stage),wallet:await wallet(db,user)};
   if(generation.status==='failed'||generation.status==='canceled')return {generation,wallet:await wallet(db,user),code:generation.error_code??'GENERATION_FAILED',error:'A tentativa não foi concluída. Seu conteúdo anterior foi preservado.'};
-  let prior=object(generation.output??{});
-  if(operation!=='full_strategy'&&p.parentGenerationId){
-    const parent=checked(await db.from('ai_generations').select('output').eq('id',p.parentGenerationId).eq('user_id',user).eq('business_id',businessId).single());
-    if(!parent)throw new PilotError('OWNERSHIP',403);
-    prior=object(parent.output??{});
+  let prior=object(generation.output??{});let claim:JsonObject;
+  try{
+    if(operation!=='full_strategy'&&p.parentGenerationId){
+      const parent=checked(await db.from('ai_generations').select('output').eq('id',p.parentGenerationId).eq('user_id',user).eq('business_id',businessId).maybeSingle());
+      if(!parent)throw new PilotError('OWNERSHIP',403);
+      prior=object(parent.output??{});
+    }
+    if(parameters.strategy)prior={...prior,strategy:object(parameters.strategy)};
+    prior=mergeWorkspaceContext(prior,parameters);
+    claim=object(await rpc(db,'pilot_claim_step',{p_user:user,p_generation:generation.id,p_stage:stage,p_hash:await hash(parameters),p_execution:crypto.randomUUID(),p_parameters:parameters}));
+  }catch(error){
+    // A reservation created by this request and never claimed must not hold the credits until it expires.
+    // Generations already in progress (another execution or earlier stages) are left untouched.
+    if(generation.status==='reserved'){
+      try{await rpc(db,'pilot_release_generation',{p_user:user,p_generation:generation.id,p_code:error instanceof PilotError?error.code:'GENERATION_FAILED'});}catch{/* pilot_reconcile releases it when the reservation expires. */}
+    }
+    throw error;
   }
-  if(parameters.strategy)prior={...prior,strategy:object(parameters.strategy)};
-  prior=mergeWorkspaceContext(prior,parameters);
-  const claim=object(await rpc(db,'pilot_claim_step',{p_user:user,p_generation:generation.id,p_stage:stage,p_hash:await hash(parameters),p_execution:crypto.randomUUID(),p_parameters:parameters}));
   if(claim.cached||!claim.claimed)return {generation:withVersion(generation,stage),wallet:await wallet(db,user),pending:claim.busy===true};
   try{
     if(operation==='monetization_plan'||operation==='full_strategy')parameters=ensureSelection(parameters,prior);

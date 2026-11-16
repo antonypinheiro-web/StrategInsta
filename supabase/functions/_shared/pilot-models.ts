@@ -60,7 +60,7 @@ async function providerFetch(url: string, init: RequestInit, fetcher = fetch): P
     // Diagnostics only: log the provider's machine-readable error fields, never its message text.
     try {
       const body = await response.json() as {error?:{code?:unknown;type?:unknown;param?:unknown;status?:unknown}};
-      const safe = (v:unknown) => typeof v === 'string' && /^[\w.\-\[\]]{1,80}$/.test(v) ? v : null;
+      const safe = (v:unknown) => typeof v === 'string' && /^[\w.\-[\]]{1,80}$/.test(v) ? v : null;
       console.warn('[pilot-models] provider error', JSON.stringify({status:response.status,code:safe(body.error?.code),type:safe(body.error?.type),param:safe(body.error?.param),providerStatus:safe(body.error?.status)}));
     } catch { /* Unparseable bodies are ignored on purpose. */ }
     throw new PilotError(code, 503, response.status === 429 || response.status >= 500);

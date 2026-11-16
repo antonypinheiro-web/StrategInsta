@@ -130,21 +130,41 @@ async function getExtraCreditsMap(supabase: ReturnType<typeof createAdminClient>
   return map;
 }
 
+const AUTH_PAGE_SIZE = 200;
+const AUTH_MAX_PAGES = 100;
+async function listAllAuthUsers(supabase: ReturnType<typeof createAdminClient>) {
+  const all = [];
+  for (let page = 1; page <= AUTH_MAX_PAGES; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: AUTH_PAGE_SIZE });
+    if (error) throw error;
+    all.push(...(data.users ?? []));
+    if ((data.users ?? []).length < AUTH_PAGE_SIZE) return all;
+  }
+  throw new AdminUserError('Há contas demais para esta operação em uma única vez. Fale com o suporte técnico.', 500);
+}
+const isBanned = (user: object) => 'banned_until' in user && typeof user.banned_until === 'string' && Date.parse(user.banned_until) > Date.now();
+
 async function listUsers(supabase: ReturnType<typeof createAdminClient>, payload: Record<string, unknown> = {}) {
   const page = Math.max(1, toInt(payload.page, 1));
   const perPage = Math.min(100, Math.max(10, toInt(payload.perPage, 50)));
   const search = String(payload.search ?? '').trim().toLowerCase();
 
-  const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-  if (error) throw error;
-
-  let users = data.users ?? [];
+  let users: Awaited<ReturnType<typeof listAllAuthUsers>> = [];
+  let totalApprox = 0;
   if (search) {
-    users = users.filter((user) =>
+    // Auth has no text search: filter across every account, then paginate the matches.
+    const matches = (await listAllAuthUsers(supabase)).filter((user) =>
       user.id.toLowerCase().includes(search) ||
       (user.email ?? '').toLowerCase().includes(search) ||
       JSON.stringify(user.user_metadata ?? {}).toLowerCase().includes(search)
     );
+    totalApprox = matches.length;
+    users = matches.slice((page - 1) * perPage, page * perPage);
+  } else {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    users = data.users ?? [];
+    totalApprox = data.total;
   }
 
   const userIds = users.map((user) => user.id);
@@ -179,7 +199,7 @@ async function listUsers(supabase: ReturnType<typeof createAdminClient>, payload
     };
   });
 
-  return { users: enriched, page, perPage, totalApprox: data.total };
+  return { users: enriched, page, perPage, totalApprox };
 }
 
 async function overview(supabase: ReturnType<typeof createAdminClient>, adminUserId: string, payload: Record<string, unknown> = {}) {
@@ -302,16 +322,12 @@ async function grantCreditsAll(supabase: ReturnType<typeof createAdminClient>, a
   const amount = toInt(payload.amount, 0);
   if (amount <= 0 || amount > 1000) throw new AdminUserError('Informe de 1 a 1.000 TPs por usuário.');
   const reason = String(payload.reason ?? 'Recarga para todos (admin)').slice(0, 500);
-  const ids: string[] = [];
-  for (let page = 1; page <= 20; page++) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
-    if (error) throw error;
-    ids.push(...(data.users ?? []).map(user => user.id));
-    if ((data.users ?? []).length < 100) break;
-  }
+  const accounts = await listAllAuthUsers(supabase);
+  const ids = accounts.map(user => user.id);
   const { data: blocked, error: blockedError } = await supabase.from('user_plans').select('user_id').eq('is_blocked', true);
   if (blockedError) throw blockedError;
-  const blockedIds = new Set((blocked ?? []).map(row => row.user_id as string));
+  // Blocked in the panel or banned at sign-in: both stay out, matching what the user list shows as blocked.
+  const blockedIds = new Set([...(blocked ?? []).map(row => row.user_id as string).filter(id => ids.includes(id)), ...accounts.filter(isBanned).map(user => user.id)]);
   const targets = ids.filter(id => !blockedIds.has(id));
   if (payload.dryRun === true) return { users: targets.length, total: targets.length * amount, blocked: blockedIds.size };
   const key = uuid(payload.idempotencyKey);

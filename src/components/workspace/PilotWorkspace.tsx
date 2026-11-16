@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { StrategyText } from '@/components/strategy/StrategyText';
 import type { CalendarDay, GeneratedStrategy } from '@/types';
 import type { PilotWorkspaceProps, PilotWorkspaceData, ContentOrigin, ContentStatus, WorkspaceOperation, WorkspaceGenerationPayload, WorkspaceChange, GeneratedContent } from '@/types/workspace';
-import { replaceWorkspaceItem, scriptSchema } from './workspace-model';
+import { generationContext, replaceWorkspaceItem, scriptSchema } from './workspace-model';
 import { CostButton, ManualEditor } from './WorkspaceControls';
 import { ContentMatrixPanel } from './ContentMatrixPanel';
 import { ContentGeneratorPanel } from './ContentGeneratorPanel';
@@ -52,7 +52,7 @@ export function PilotWorkspace({ strategy, userInput, savedStrategyId, data, act
     lock.current = true; setBusy(true); setError('');
     try { return await action(); } catch (reason) { const message = reason instanceof Error ? reason.message : 'Não foi possível concluir. Seu conteúdo anterior continua disponível.'; setError(message); throw reason; } finally { lock.current = false; setBusy(false); }
   };
-  const generate = (operation: WorkspaceOperation, payload: Partial<WorkspaceGenerationPayload> = {}) => runExclusive(() => onGenerate(operation, { ...payload, strategyId: savedStrategyId, workspace: data, userInput, strategy: { ...strategy, ...data.overrides }, selectedMonetizationIds: payload.selectedMonetizationIds ?? data.selectedMonetizationIds }));
+  const generate = (operation: WorkspaceOperation, payload: Partial<WorkspaceGenerationPayload> = {}) => runExclusive(() => onGenerate(operation, { ...payload, strategyId: savedStrategyId, workspace: generationContext(data), userInput, strategy: { ...strategy, ...data.overrides }, selectedMonetizationIds: payload.selectedMonetizationIds ?? data.selectedMonetizationIds }));
   const save = (change: WorkspaceChange) => runExclusive(() => onSaveVersion(change));
   const editItem = (origin: ContentOrigin, value: unknown) => save({ kind: 'manual_edit', title: 'Edição manual de conteúdo', source: origin, data: replaceWorkspaceItem(data, origin, value) });
   const editScript = (script: GeneratedContent) => save({ kind: 'manual_edit', title: `Edição de ${script.title}`, source: { kind: 'section', id: script.id }, data: { ...data, scripts: data.scripts.map(item => item.id === script.id ? { ...scriptSchema.parse(script), versionId: undefined } : item) } });
