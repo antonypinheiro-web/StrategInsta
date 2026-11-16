@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PilotWorkspace } from '@/components/workspace/PilotWorkspace';
-import { emptyWorkspace, applyWorkspaceResult, draftWeek } from '@/components/workspace/workspace-model';
+import { emptyWorkspace, applyWorkspaceResult, completeScripts, draftWeek } from '@/components/workspace/workspace-model';
 import { PilotHistoryDialog } from '@/components/PilotHistoryDialog';
 import { AccountViewSwitch } from '@/components/AccountViewSwitch';
 import { SavedStrategiesDialog } from '@/components/SavedStrategiesDialog';
@@ -190,8 +190,9 @@ export default function PilotIndex() {
       const reverse: Record<string, WorkspaceOperation> = { idea: 'idea_generate', variation: 'format_variation', refine_short: 'item_refine', script: 'content_script', stories_day: 'stories_day', stories_week: 'stories_week', monetization_plan: 'monetization_plan' };
       const operation = record.operation === 'section' ? p.section === 'contentTable' ? 'matrix_generate' : p.section === 'instagramBio' ? 'bio_generate' : p.section === 'monetizationIdeas' ? 'monetization_analyze' : 'section_regenerate' : reverse[record.operation];
       setStrategy(p.strategy ?? {});
-      try { setWorkspace(operation && record.status === 'completed' ? applyWorkspaceResult(p.workspace ?? emptyWorkspace(), operation, p, { output: record.output, versionId: record.versionId }) : p.workspace ?? emptyWorkspace()); }
-      catch { setWorkspace(p.workspace ?? emptyWorkspace()); setError('O registro foi recuperado, mas esta saída precisa ser revisada pelo suporte.'); }
+      const base = completeScripts(p.workspace ?? emptyWorkspace());
+      try { setWorkspace(operation && record.status === 'completed' ? applyWorkspaceResult(base, operation, p, { output: record.output, versionId: record.versionId }) : base); }
+      catch { setWorkspace(base); setError('O registro foi recuperado, mas esta saída precisa ser revisada pelo suporte.'); }
     }
   };
   const openRevision = async (record: RevisionRecord) => {

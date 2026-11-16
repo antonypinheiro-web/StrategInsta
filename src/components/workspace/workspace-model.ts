@@ -42,6 +42,14 @@ export function calendarFormat(value: string | undefined): ContentFormat | undef
   if (/post|est[aá]tic|static|imagem|foto/.test(text)) return 'static';
   return undefined;
 }
+/** Context sent with each generation. Storyboards go as title and format only, so the request does not grow with every content created. */
+export function generationContext(data: PilotWorkspaceData): PilotWorkspaceData {
+  return { ...data, scripts: data.scripts.slice(-40).map(script => ({ title: script.title, format: script.format })) as unknown as GeneratedContent[] };
+}
+/** History records hold the generation context, where storyboards are summaries; keep only complete ones for display. */
+export function completeScripts(data: PilotWorkspaceData): PilotWorkspaceData {
+  return { ...data, scripts: (data.scripts ?? []).filter(script => scriptSchema.safeParse(script).success) };
+}
 export function visibleIdeas<T>(ideas: T[]) { return ideas.slice(-3); }
 export function allCellKeys() { return awarenessLevels.flatMap(level => contentPurposes.map(item => `${level.id}:${item.id}`)); }
 

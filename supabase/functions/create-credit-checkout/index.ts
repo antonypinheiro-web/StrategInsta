@@ -33,7 +33,7 @@ Deno.serve(async req => {
     const { data: plan } = await supabase.from('user_plans').select('is_blocked').eq('user_id', user.id).maybeSingle();
     if (plan?.is_blocked) return json({ error: 'Conta bloqueada.' }, 403);
 
-    const metadata = { kind: 'credit_pack', pack: pack.id, credits: String(pack.credits), supabase_user_id: user.id };
+    const metadata = { kind: 'credit_pack', pack: pack.id, credits: String(pack.credits), amount_cents: String(pack.amountCents), supabase_user_id: user.id };
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { maxNetworkRetries: 2, timeout: 20000 });
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
