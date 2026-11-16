@@ -48,14 +48,14 @@ const PERSONAS = [
     emoji: "📱",
     title: "Social Media Manager",
     description: "Você gerencia múltiplos clientes e precisa de eficiência. Entregue estratégias profissionais em fração do tempo.",
-    cta: "Pacotes a partir de R$29, sem assinatura",
+    cta: "Pacotes a partir de R$39, sem assinatura",
     highlight: true,
   },
   {
     emoji: "🏢",
     title: "Agência de Marketing",
     description: "Escale sua produção sem escalar sua equipe. Compre TPs conforme a demanda dos seus clientes.",
-    cta: "Pacote de 150 TPs por R$69",
+    cta: "Pacote de 150 TPs por R$99",
   },
 ];
 

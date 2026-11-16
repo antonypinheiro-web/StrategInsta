@@ -12,6 +12,7 @@ export const contentPurposes = [
   { id: 'engagement', label: 'Engajamento e retenção' },
   { id: 'authority', label: 'Autoridade' },
   { id: 'objection', label: 'Quebra de objeção' },
+  { id: 'sale', label: 'Oferta e venda' },
 ] as const;
 export type AwarenessLevel = typeof awarenessLevels[number]['id'];
 export type ContentPurpose = typeof contentPurposes[number]['id'];
@@ -23,6 +24,8 @@ export interface ContentIdea {
   /** Legacy matrices stored a format; new ideas leave it to the user at generation time. */
   format?: ContentFormat;
   briefingBasis: string; proofNeeded?: string; cta?: string; versionId?: string;
+  /** Internal tag used by the engine; never shown. */
+  funnelStage?: string;
 }
 export interface MatrixCell {
   id: string; awareness: AwarenessLevel; purpose: ContentPurpose;
@@ -66,6 +69,8 @@ export interface PilotWorkspaceData {
   monetization?: MonetizationAnalysis; selectedMonetizationIds: string[];
   monetizationPlan?: string; bios?: BioOption[]; scripts: GeneratedContent[];
   overrides?: Partial<GeneratedStrategy>; staleSections?: string[];
+  /** Internal reading of the business used by the engine to prioritize content; never shown. */
+  method?: { phase: string; phaseReason?: string; bottleneck: string; bottleneckReason?: string };
 }
 export type WorkspaceOperation = 'matrix_generate' | 'idea_generate' | 'format_variation' |
   'item_refine' | 'content_script' | 'stories_day' | 'stories_week' |

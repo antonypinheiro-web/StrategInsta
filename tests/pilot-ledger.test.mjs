@@ -21,7 +21,7 @@ before(async()=>{
  CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY);
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
  GRANT USAGE ON SCHEMA auth TO authenticated;`);
- for(const path of ['docs/supabase-schema.sql','supabase/migrations/20260906002606_billing_event_safety.sql','supabase/migrations/20260906003602_protect_plan_fields.sql','supabase/migrations/20260910120000_pilot_generation_ledger.sql'])
+ for(const path of ['docs/supabase-schema.sql','supabase/migrations/20260906002606_billing_event_safety.sql','supabase/migrations/20260906003602_protect_plan_fields.sql','supabase/migrations/20260910120000_pilot_generation_ledger.sql','supabase/migrations/20261117120000_content_matrix_stage.sql'])
    await db.exec(await readFile(new URL('../'+path,import.meta.url),'utf8'));
  await db.query('INSERT INTO auth.users VALUES($1),($2)',[owner,other]);
  await db.query('INSERT INTO public.admin_users(user_id,email) VALUES($1,$2)',[owner,'fixture@example.invalid']);
@@ -67,7 +67,7 @@ test('a changed operation or input cannot reuse an idempotency key',async()=>{
 });
 test('full strategy persists each step and only charges once after the final commit',async()=>{
  const req=request();const g=await reserve(req);
- for(const stage of ['idealCustomerProfile','monetizationIdeas','instagramBio','storiesStrategy','final']){
+ for(const stage of ['idealCustomerProfile','monetizationIdeas','instagramBio','storiesStrategy','contentMatrix','final']){
   const c=await claim(g.id,stage);assert.equal(c.claimed,true);
   const result=await complete(g.id,c.executionId,stage);
   assert.equal(result.status,stage==='final'?'completed':'awaiting_input');
@@ -76,7 +76,7 @@ test('full strategy persists each step and only charges once after the final com
  assert.equal((await wallet()).reserved,0);
  assert.equal((await reserve(req)).status,'completed');
  assert.equal((await row("SELECT count(*)::int n FROM public.ai_credit_ledger WHERE kind='charge'")).n,1);
- assert.equal((await row('SELECT count(*)::int n FROM public.pilot_revisions')).n,5);
+ assert.equal((await row('SELECT count(*)::int n FROM public.pilot_revisions')).n,6);
 });
 test('stage order, single execution lease and cached stages prevent duplicate provider calls',async()=>{
  const g=await reserve(request());await assert.rejects(claim(g.id,'final'),/STAGE_ORDER/);

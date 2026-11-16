@@ -5,14 +5,14 @@ import { createWebhookHandler } from '../supabase/functions/_shared/billing.ts';
 import { CREDIT_PACKS, brl, formatTps } from '../src/lib/credit-packs.ts';
 
 const userId = '00000000-0000-4000-8000-000000000001';
-const session = (over = {}) => ({ id: 'cs_test_fixture_123456', mode: 'payment', payment_status: 'paid', currency: 'brl', amount_total: 2900,
+const session = (over = {}) => ({ id: 'cs_test_fixture_123456', mode: 'payment', payment_status: 'paid', currency: 'brl', amount_total: 3900,
   client_reference_id: userId, metadata: { kind: 'credit_pack', pack: 'pack_50', credits: '50', supabase_user_id: userId }, ...over });
 const event = (object, type = 'checkout.session.completed') => ({ id: 'evt_fixture', type, created: 1000, data: { object } });
 
 test('screen and server sell the same packs at the approved prices', () => {
   assert.deepEqual(CREDIT_PACKS.map(p => [p.id, p.credits, p.priceCents]), Object.entries(SERVER_PACKS).map(([id, p]) => [id, p.credits, p.amountCents]));
-  assert.deepEqual(CREDIT_PACKS.map(p => [p.credits, p.priceCents]), [[50, 2900], [150, 6900]]);
-  assert.deepEqual(CREDIT_PACKS.map(p => brl(p.priceCents).replace(/\s/g, ' ')), ['R$ 29,00', 'R$ 69,00']);
+  assert.deepEqual(CREDIT_PACKS.map(p => [p.credits, p.priceCents]), [[50, 3900], [150, 9900]]);
+  assert.deepEqual(CREDIT_PACKS.map(p => brl(p.priceCents).replace(/\s/g, ' ')), ['R$ 39,00', 'R$ 99,00']);
 });
 
 test('balance shows only the TP volume, never deliveries or money per strategy', () => {
@@ -24,7 +24,7 @@ test('balance shows only the TP volume, never deliveries or money per strategy',
 
 test('a paid pack checkout credits the wallet once per Stripe session', () => {
   assert.deepEqual(buildPackGrant(event(session())), { user_id: userId, credits: 50, reference: 'stripe-checkout:cs_test_fixture_123456',
-    metadata: { pack: 'pack_50', amountCents: 2900, currency: 'brl', eventId: 'evt_fixture' } });
+    metadata: { pack: 'pack_50', amountCents: 3900, currency: 'brl', eventId: 'evt_fixture' } });
   // Pix confirms later through async_payment_succeeded.
   assert.equal(buildPackGrant(event(session({ payment_status: 'unpaid' }))), null);
   assert.equal(buildPackGrant(event(session(), 'checkout.session.async_payment_succeeded')).credits, 50);

@@ -11,11 +11,13 @@ function payload(data, fields = {}) { return { workspace: data, userInput: {}, .
 
 test('matrix requires each awareness-purpose pair and preserves all alternatives beyond visible three', () => {
   const valid = matrix();
-  assert.equal(matrixSchema.parse(valid).cells.length, 20);
+  assert.equal(matrixSchema.parse(valid).cells.length, 25);
+  // Matrices saved before the "Oferta e venda" column keep opening with their twenty cells.
+  assert.equal(matrixSchema.parse({ ...valid, cells: valid.cells.filter(cell => cell.purpose !== 'sale') }).cells.length, 20);
   const duplicate = structuredClone(valid);
   duplicate.cells[1] = duplicate.cells[0];
   assert.throws(() => matrixSchema.parse(duplicate));
-  assert.throws(() => matrixSchema.parse({ ...valid, cells: valid.cells.slice(1) }));
+  assert.throws(() => matrixSchema.parse({ ...valid, cells: valid.cells.slice(6) }));
   const empty = structuredClone(valid); empty.cells[0].ideas = [];
   assert.throws(() => matrixSchema.parse(empty));
   empty.cells[0].rationale = 'Esta abordagem depende de uma prova ainda não disponível.';
