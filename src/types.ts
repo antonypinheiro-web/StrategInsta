@@ -21,6 +21,8 @@ export interface UserInput {
   weeklyTime?: string;
   recordingComfort?: string;
   capacityToServe?: string;
+  /** Automatic Direct reply and what it delivers; empty means there is none. */
+  directAutomation?: string;
   priceRange?: string;
   baseline?: import('./types/briefing').ProfileBaseline;
   attachments?: import('./types/briefing').ApprovedAttachment[];

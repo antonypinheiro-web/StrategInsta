@@ -27,7 +27,7 @@ import type { GeneratedStrategy, UserInput } from '@/types';
 import type { PilotWorkspaceData, WorkspaceChange, WorkspaceGenerationPayload, WorkspaceGenerationResult, WorkspaceOperation } from '@/types/workspace';
 import logo from '@/assets/logo.png';
 
-const stages = ['idealCustomerProfile', 'monetizationIdeas', 'instagramBio', 'storiesStrategy', 'final'] as const;
+const stages = ['idealCustomerProfile', 'monetizationIdeas', 'instagramBio', 'storiesStrategy', 'contentMatrix', 'final'] as const;
 type Stage = typeof stages[number];
 type Phase = 'onboarding'|'dashboard'|Stage;
 interface Snapshot extends PilotOutput { input: UserInput; source?: WorkspaceChange['source']; generationId?: string; }
@@ -180,7 +180,7 @@ export default function PilotIndex() {
       setStrategy(output.strategy ?? {}); setWorkspace(output.workspace ?? emptyWorkspace());
       if (record.status === 'completed') { setPhase('dashboard'); setJob(undefined); setViewingVersion(true); }
       else {
-        const nextStage = stages.find(value => value === 'final' || !output.strategy?.[value]) ?? 'final';
+        const nextStage = stages.find(value => value === 'final' || (value === 'contentMatrix' ? !output.workspace?.matrix : !output.strategy?.[value])) ?? 'final';
         setJob({ idempotencyKey: record.idempotency_key, generationId: record.id, input: record.input, stage: nextStage });
         setPhase(nextStage); setViewingVersion(false); setError('Geração recuperada. Retome a etapa pendente ou encerre a reserva.');
       }
@@ -212,13 +212,14 @@ export default function PilotIndex() {
         else if (section === 'monetizationIdeas') nextWorkspace = { ...nextWorkspace, monetization: record.content as PilotWorkspaceData['monetization'] };
         else if (section === 'instagramBio') nextWorkspace = { ...nextWorkspace, bios: record.content as PilotWorkspaceData['bios'] };
         else if (section === 'storiesStrategy') nextWorkspace = { ...nextWorkspace, storiesWeek: record.content as PilotWorkspaceData['storiesWeek'] };
+        else if (section === 'contentMatrix') nextWorkspace = { ...nextWorkspace, matrix: record.content as PilotWorkspaceData['matrix'] };
         else if (section === 'final' && record.content && typeof record.content === 'object') {
-          const final = record.content as { matrix: PilotWorkspaceData['matrix']; editorialCalendar: GeneratedStrategy['editorialCalendar']; actionPlan: GeneratedStrategy['actionPlan'] };
-          nextWorkspace = { ...nextWorkspace, matrix: final.matrix };
+          const final = record.content as { matrix?: PilotWorkspaceData['matrix']; editorialCalendar: GeneratedStrategy['editorialCalendar']; actionPlan: GeneratedStrategy['actionPlan'] };
+          nextWorkspace = { ...nextWorkspace, matrix: final.matrix ?? nextWorkspace.matrix };
           nextStrategy = { ...nextStrategy, editorialCalendar: final.editorialCalendar, actionPlan: final.actionPlan };
         }
         openGeneration({ ...parent, status: 'completed', output: { strategy: nextStrategy, workspace: nextWorkspace } });
-        setReviewSection(section === 'final' ? 'contentTable' : section);
+        setReviewSection(section === 'contentMatrix' ? 'contentTable' : section === 'final' ? 'editorialCalendar' : section);
       } catch (e) { toast.error(message(e)); }
       return;
     }
@@ -246,10 +247,10 @@ export default function PilotIndex() {
       {error && <div role="alert" className="space-y-3 rounded-xl border border-destructive/40 p-4"><p>{error}</p>{job && !busy && <div className="flex gap-2"><Button onClick={async () => { try { await runStage(job); } catch (e) { setError(message(e)); } }}>Continuar geração</Button>{job.generationId && <Button variant="outline" onClick={async () => { try { const result = await pilotService.cancel(job.generationId!); setWallet(result.wallet); setJob(undefined); setPhase('dashboard'); setError('Geração cancelada. Os TPs reservados voltaram ao saldo e as versões prontas continuam no histórico.'); } catch (e) { setError(message(e)); } }}>Cancelar geração</Button>}</div>}</div>}
       {busy && <div className="rounded-xl border p-10"><LoadingSpinner message="Preparando sua estratégia. As etapas concluídas ficam no histórico." /></div>}{initialAgenda && workspace.storiesAgenda ? <section className="space-y-5 rounded-xl border p-5"><h2 className="text-xl font-semibold">Como será sua semana?</h2><p className="text-sm text-muted-foreground">A primeira semana inclui até 35 Stories no custo da estratégia. Conte a rotina real e escolha de 0 a 15 por dia.</p>{workspace.storiesAgenda.days.map(day => <div key={day.id} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[130px_1fr_110px]"><label className="text-sm">{new Date(day.date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}</label><Textarea aria-label={'Rotina ' + day.date} maxLength={3000} value={day.routine} placeholder="Compromissos, bastidores, oferta ou evento. Pode deixar em branco." onChange={e => setWorkspace(prev => ({ ...prev, storiesAgenda: { ...prev.storiesAgenda!, days: prev.storiesAgenda!.days.map(d => d.id === day.id ? { ...d, routine: e.target.value } : d) } }))} /><label className="text-sm">Quantidade<Input type="number" min={0} max={15} value={day.requestedCount} onChange={e => setWorkspace(prev => ({ ...prev, storiesAgenda: { ...prev.storiesAgenda!, days: prev.storiesAgenda!.days.map(d => d.id === day.id ? { ...d, requestedCount: Math.max(0, Math.min(15, Number(e.target.value))) } : d) } }))} /></label></div>)}<p>{totalStories}/35 Stories incluídos</p><Button disabled={totalStories > 35} onClick={() => void continueGeneration()}>Gerar semana incluída</Button></section>
       : input && <fieldset disabled={busy}><PilotWorkspace strategy={strategy} userInput={input} data={workspace} savedStrategyId={strategyId}
-        activeSection={phase === 'dashboard' || phase === 'final' ? reviewSection : phase} balance={wallet?.available} readOnly={viewingVersion}
+        activeSection={phase === 'dashboard' || phase === 'final' ? reviewSection : phase === 'contentMatrix' ? 'contentTable' : phase} balance={wallet?.available} readOnly={viewingVersion}
         onGenerate={protectedGenerate} onSaveVersion={saveChange}
         onFeedback={async feedback => { await pilotService.feedback({ ...feedback, businessId }); toast.success('Avaliação salva nesta versão.'); }} /></fieldset>}
-      {!busy && !error && !initialAgenda && job && phase !== 'dashboard' && <div className="flex justify-end"><Button onClick={() => void continueGeneration()}>{phase === 'storiesStrategy' ? 'Concluir matriz, calendário e plano' : 'Confirmar e continuar'}</Button></div>}
+      {!busy && !error && !initialAgenda && job && phase !== 'dashboard' && <div className="flex justify-end"><Button onClick={() => void continueGeneration()}>{phase === 'storiesStrategy' ? 'Gerar matriz de conteúdo' : phase === 'contentMatrix' ? 'Concluir calendário e plano' : 'Confirmar e continuar'}</Button></div>}
     </main>}
     <PilotHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} onOpenGeneration={openGeneration} onOpenRevision={openRevision} />
     <InputDialog isOpen={nameOpen} onClose={() => setNameOpen(false)} onConfirm={saveNamed} title={strategyId ? 'Renomear estratégia' : 'Nomear sua estratégia'} description={strategyId ? 'O novo nome aparece na lista de estratégias salvas.' : 'Escolha um nome para encontrar esta estratégia depois. Salvar não usa TPs.'} label="Nome da estratégia" placeholder="Ex.: Setembro da minha marca" initialValue={strategyName || 'Estratégia ' + new Date().toLocaleDateString('pt-BR')} confirmText={strategyId ? 'Salvar nome' : 'Salvar estratégia'} cancelText="Cancelar" />

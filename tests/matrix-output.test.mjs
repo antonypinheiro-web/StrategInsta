@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { parsePilotOutput } from '../supabase/functions/_shared/pilot-content.ts';
 
 const awareness = ['unaware', 'problem', 'solution', 'offer', 'decision'];
-const purposes = ['growth', 'engagement', 'authority', 'objection'];
+const purposes = ['growth', 'engagement', 'authority', 'objection', 'sale'];
 const idea = (id, format = 'reel') => ({ id, title: 'Título', angle: 'Ângulo', format, briefingBasis: 'Base', cta: 'Convite' });
 const cells = () => awareness.flatMap(a => purposes.map(p => ({ id: `${a}:${p}`, awareness: a, purpose: p, ideas: [idea(`${a}-${p}`)], rationale: 'Motivo' })));
 const parse = value => parsePilotOutput(JSON.stringify(value), 'section', { section: 'contentTable' });
@@ -11,7 +11,7 @@ const reasonOf = fn => { try { fn(); } catch (e) { return `${e.code}:${e.reason 
 
 test('a well-formed matrix passes unchanged', () => {
   const parsed = parse({ id: 'm', cells: cells() });
-  assert.equal(parsed.cells.length, 20);
+  assert.equal(parsed.cells.length, 25);
 });
 
 test('harmless model deviations are normalized instead of failing the paid stage', () => {
@@ -19,7 +19,7 @@ test('harmless model deviations are normalized instead of failing the paid stage
     id: i === 0 ? undefined : c.id, ideas: [idea(`${c.id}-a`, ['Carrossel', 'Reels', 'post', 'story'][i % 4]), idea(`${c.id}-b`)] }));
   raw.push({ ...raw[1] });
   const parsed = parse({ matrix: { cells: raw } });
-  assert.equal(parsed.cells.length, 20);
+  assert.equal(parsed.cells.length, 25);
   assert.equal(parsed.id, 'matrix');
   assert.equal(parsed.cells[0].id, 'unaware:growth');
   assert.deepEqual(parsed.cells.slice(0, 4).map(c => c.ideas[0].format), ['carousel', 'reel', 'static', 'stories']);
@@ -27,7 +27,7 @@ test('harmless model deviations are normalized instead of failing the paid stage
 });
 
 test('real structural failures still fail and report a content-free reason', () => {
-  assert.equal(reasonOf(() => parse({ id: 'm', cells: cells().slice(0, 19) })), 'INVALID_OUTPUT:matrix.cells.length=19');
+  assert.equal(reasonOf(() => parse({ id: 'm', cells: cells().slice(0, 24) })), 'INVALID_OUTPUT:matrix.cells.length=24');
   // Ideas no longer require a format: an unrecognized one is dropped instead of failing the stage.
   const badFormat = cells(); badFormat[3].ideas = [idea('x', 'podcast')];
   assert.equal(parse({ id: 'm', cells: badFormat }).cells[3].ideas[0].format, undefined);

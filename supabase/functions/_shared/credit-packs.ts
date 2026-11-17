@@ -1,8 +1,8 @@
-// Credit packs approved by Antony on 2026-10-12 (council report auditoria/precificacao).
+// Credit packs approved by Antony on 2026-10-12 (council report auditoria/precificacao); prices raised by Antony on 2026-10-30.
 // Keep in sync with src/lib/credit-packs.ts; tests/credit-packs.test.mjs checks both.
 export const CREDIT_PACKS = {
-  pack_50: { credits: 50, amountCents: 2900, name: 'ThinkPost: 50 TPs' },
-  pack_150: { credits: 150, amountCents: 6900, name: 'ThinkPost: 150 TPs' },
+  pack_50: { credits: 50, amountCents: 3900, name: 'ThinkPost: 50 TPs' },
+  pack_150: { credits: 150, amountCents: 9900, name: 'ThinkPost: 150 TPs' },
 } as const;
 export type CreditPackId = keyof typeof CREDIT_PACKS;
 

@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { PilotError, runModel, validateModel } from '../_shared/pilot-models.ts';
-import { aggregateStage, buildPilotPrompt, mergeWorkspaceContext, normalizeParameters, object, OPERATIONS, parsePilotOutput, stampVersion, string, uuid, validateBriefing, type JsonObject } from '../_shared/pilot-content.ts';
+import { aggregateStage, buildPilotPrompt, hasCompleteMatrix, mergeWorkspaceContext, normalizeParameters, object, OPERATIONS, parseMethod, parsePilotOutput, stampVersion, string, uuid, validateBriefing, type JsonObject } from '../_shared/pilot-content.ts';
 
 const corsHeaders = {'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{...corsHeaders,'Content-Type':'application/json'}});
@@ -153,6 +153,8 @@ async function generate(db:Database,user:string,p:JsonObject){
   if(claim.cached||!claim.claimed)return {generation:withVersion(generation,stage),wallet:await wallet(db,user),pending:claim.busy===true};
   try{
     if(operation==='monetization_plan'||operation==='full_strategy')parameters=ensureSelection(parameters,prior);
+    // Decided on the server from the generation itself, never from the client.
+    if(stage==='final')parameters={...parameters,finalScope:hasCompleteMatrix(prior)?'calendarPlan':'all'};
     const feedbackRows=await referenceContext(db,user,businessId);
     const {system,user:prompt}=buildPilotPrompt(operation,parameters,input,prior,feedbackRows);
     const config=validateModel(generation.selected_model);
@@ -195,7 +197,7 @@ async function generate(db:Database,user:string,p:JsonObject){
     }
     const {text:_finalText,...finalMetadata}=result;
     const output=stampVersion(parsed,versionId);
-    const aggregate=operation==='full_strategy'?aggregateStage(prior,stage,output,parameters):output;
+    const aggregate=operation==='full_strategy'?aggregateStage(prior,stage,output,parameters,stage==='idealCustomerProfile'?parseMethod(result.text):undefined):output;
     generation=object(await rpc(db,'pilot_complete_step',{p_user:user,p_generation:generation.id,p_stage:stage,p_execution:claim.executionId,p_output:output,p_aggregate:aggregate,p_metadata:{...finalMetadata,versionId,attempts,fallback:attempts.length>0,effectiveConfig:effective,origin:parameters.origin??null}}));
     return {generation,wallet:await wallet(db,user)};
   }catch(error){

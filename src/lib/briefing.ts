@@ -22,7 +22,7 @@ export const emptyBriefing: BriefingData = {
   businessStage: '', serviceArea: '', salesChannels: '', purchaseProcess: '',
   customerProblem: '', differentiators: '', availableProof: '', communicationRestrictions: '',
   conversionDestination: '', currentBio: '', weeklyTime: '', recordingComfort: '',
-  capacityToServe: '', priceRange: '',
+  capacityToServe: '', priceRange: '', directAutomation: '',
 };
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;

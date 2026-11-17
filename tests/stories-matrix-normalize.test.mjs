@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildPilotPrompt, normalizeFormat, parsePilotOutput } from '../supabase/functions/_shared/pilot-content.ts';
 
 const awareness = ['unaware', 'problem', 'solution', 'offer', 'decision'];
-const purposes = ['growth', 'engagement', 'authority', 'objection'];
+const purposes = ['growth', 'engagement', 'authority', 'objection', 'sale'];
 const reasonOf = fn => { try { fn(); } catch (e) { return `${e.code}:${e.reason ?? ''}`; } return 'ok'; };
 
 test('descriptive formats from the models map to the allowed enum (matrix failure of 12/10)', () => {

@@ -8,11 +8,11 @@ const optionalText = z.string().max(12000).optional();
 const id = z.string().min(1).max(200);
 const format = z.enum(['reel', 'carousel', 'static', 'stories']);
 const awareness = z.enum(['unaware', 'problem', 'solution', 'offer', 'decision']);
-const purpose = z.enum(['growth', 'engagement', 'authority', 'objection']);
+const purpose = z.enum(['growth', 'engagement', 'authority', 'objection', 'sale']);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => { const parsed = new Date(`${v}T12:00:00Z`); return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === v; }, 'Data inválida');
 const uniqueIds = (items: { id?: string }[]) => new Set(items.map(item => item.id)).size === items.length;
-export const ideaSchema = z.object({ id, title: text, angle: text, format: format.optional(), briefingBasis: text, proofNeeded: optionalText, cta: optionalText, versionId: id.optional() }) as z.ZodType<ContentIdea>;
-export const matrixSchema = z.object({ id, cells: z.array(z.object({ id, awareness, purpose, ideas: z.array(ideaSchema).max(30).refine(uniqueIds), rationale: optionalText }).refine(cell => cell.ideas.length > 0 || !!cell.rationale?.trim(), 'Célula vazia precisa de justificativa')).length(20) }).refine(matrix => new Set(matrix.cells.map(cell => `${cell.awareness}:${cell.purpose}`)).size === 20 && uniqueIds(matrix.cells), 'A matriz precisa das vinte células distintas') as z.ZodType<ContentMatrix>;
+export const ideaSchema = z.object({ id, title: text, angle: text, format: format.optional(), briefingBasis: text, proofNeeded: optionalText, cta: optionalText, funnelStage: z.string().max(40).optional(), versionId: id.optional() }) as z.ZodType<ContentIdea>;
+export const matrixSchema = z.object({ id, cells: z.array(z.object({ id, awareness, purpose, ideas: z.array(ideaSchema).max(30).refine(uniqueIds), rationale: optionalText }).refine(cell => cell.ideas.length > 0 || !!cell.rationale?.trim(), 'Célula vazia precisa de justificativa')).min(20).max(25) }).refine(matrix => new Set(matrix.cells.map(cell => `${cell.awareness}:${cell.purpose}`)).size === matrix.cells.length && uniqueIds(matrix.cells), 'A matriz precisa de células distintas') as z.ZodType<ContentMatrix>;
 export const storySchema = z.object({ id, position: z.number().int().min(1).max(15), goal: z.enum(['retain', 'engage', 'convert']), narrative: text, scene: text, speech: z.string().max(12000), onScreen: z.string().max(1000), tool: text, format: z.enum(['video', 'photo', 'text']).optional(), cta: optionalText, feedConnection: optionalText, effort: optionalText, versionId: id.optional() }) as z.ZodType<StoryFrame>;
 export const daySchema = z.object({ id, date, routine: z.string().max(3000), requestedCount: z.number().int().min(0).max(15), offerOrEvent: optionalText, restrictions: optionalText, stories: z.array(storySchema).max(15) }).refine(day => day.stories.length === day.requestedCount && uniqueIds(day.stories) && day.stories.every((story, index) => story.position === index + 1), 'A quantidade e a sequência precisam corresponder ao dia solicitado') as z.ZodType<StoriesDay>;
 export const weekSchema = z.object({ id, weekStart: date, previousWeekId: id.optional(), continuationSummary: optionalText, executionFeedback: optionalText, days: z.array(daySchema).length(7) }).refine(week => uniqueIds(week.days) && week.days.every((day, index) => day.date === addDays(week.weekStart, index)), 'A semana precisa de sete dias consecutivos') as z.ZodType<StoriesWeek>;
@@ -86,8 +86,15 @@ export function applyWorkspaceResult(data: PilotWorkspaceData, operation: Worksp
     next.scripts = [...data.scripts, { ...script, origin: payload.origin ?? script.origin, status: 'generated', createdAt: script.createdAt ?? new Date().toISOString() }];
   } else if (operation === 'idea_generate' || operation === 'format_variation') {
     const idea = version(ideaSchema.parse(parsedOutput));
-    if (!data.matrix || !payload.cell || !data.matrix.cells.some(cell => cell.id === payload.cell!.id)) throw new Error('A célula de origem não está disponível.');
-    next.matrix = { ...data.matrix, cells: data.matrix.cells.map(cell => cell.id === payload.cell!.id ? { ...cell, ideas: [...cell.ideas, idea] } : cell) };
+    const target = payload.cell;
+    if (!data.matrix || !target) throw new Error('A célula de origem não está disponível.');
+    let cells = data.matrix.cells;
+    if (!cells.some(cell => cell.id === target.id)) {
+      // Matrices saved before the "Oferta e venda" column gain the missing cell with its first idea.
+      if (cells.some(cell => cell.awareness === target.awareness && cell.purpose === target.purpose) || !awareness.safeParse(target.awareness).success || !purpose.safeParse(target.purpose).success) throw new Error('A célula de origem não está disponível.');
+      cells = [...cells, { id: target.id, awareness: target.awareness, purpose: target.purpose, ideas: [] }];
+    }
+    next.matrix = { ...data.matrix, cells: cells.map(cell => cell.id === target.id ? { ...cell, ideas: [...cell.ideas, idea] } : cell) };
   } else if (operation === 'item_refine') {
     return replaceWorkspaceItem(data, payload.origin, parsedOutput, result.versionId);
   } else if (operation === 'section_regenerate') {

@@ -246,6 +246,7 @@ export function OnboardingWizard({ onStart, initialValues, error, isAuthenticate
                 { value: 'Visitar o espaço físico', label: 'Visitar o espaço físico' },
                 { value: 'Seguir para conhecer melhor a marca', label: 'Seguir para conhecer melhor a marca' },
                 { value: 'Próximo passo ainda indefinido. Recomendar como hipótese.', label: 'Preciso de uma sugestão' }])}
+              {field('directAutomation', 'Tem resposta automática no Direct? O que ela entrega? (opcional)', 'Ex.: quem comenta GUIA recebe o link do guia. Deixe em branco se não tiver.', true)}
               <div className="flex flex-wrap gap-x-6 gap-y-3">
                 <Button variant="link" className="h-auto p-0" onClick={() => choose('undecided')}>Ainda não sei definir</Button>
                 <Button variant="link" className="h-auto p-0 text-muted-foreground" onClick={() => choose('custom')}>Tenho outro objetivo</Button>

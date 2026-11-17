@@ -1,10 +1,16 @@
 // "Novidades" in the account menu. Newest first; plain language for users, one entry per release.
 export interface ChangelogEntry { version: string; date: string; items: string[] }
 
-export const APP_VERSION = '0.8.1';
+export const APP_VERSION = '0.9.0';
 
 export const CHANGELOG: ChangelogEntry[] = [
-  { version: '0.8.1', date: '2026-11-17', items: [
+  { version: '0.9.0', date: '2026-11-16', items: [
+    'A matriz ganhou a coluna "Oferta e venda" e passou a ter 25 ideias.',
+    'O perfil de cliente agora diz o que observar para saber se o conteúdo está no caminho certo.',
+    'Calendário e plano de ação passam a priorizar o ponto em que seu negócio mais precisa avançar.',
+    'No briefing, você pode informar se tem resposta automática no Direct.',
+  ] },
+  { version: '0.8.1', date: '2026-11-16', items: [
     'As gerações continuam funcionando mesmo com muitos conteúdos já criados na estratégia.',
     'Se uma geração falhar logo no início, os TPs reservados voltam na hora.',
     'O calendário não falha mais quando um dia vem sem hashtags.',
